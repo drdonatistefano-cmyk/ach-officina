@@ -71,6 +71,7 @@ jobs:
             /strumenti/
             /contatti/estero/
             /contatti/raccolta/
+            /contatti/invii.csv
       - uses: actions/setup-python@v5
         with: { python-version: '3.12' }
       - name: Conteggi delle aree
