@@ -1,0 +1,56 @@
+name: Menu dei ristoranti di Dinners
+# 18/11/2026 (Stefano): il «lettore dei menu». Per i ristoranti di Dinners con il sito proprio cerca la pagina o il
+# PDF del menu e ne ricava il prezzo indicativo (strumenti/menu_soggetti.py del repository privato). Si salvano solo il
+# link e i numeri dei prezzi, mai il testo del menu. Risultati nel privato; nel registro solo conteggi.
+on:
+  schedule:
+    - cron: '43 20 * * *'   # ogni sera; riprende da dove era rimasto, rilegge un sito solo dopo 90 giorni
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency: { group: menu-soggetti, cancel-in-progress: false }
+jobs:
+  raccogli:
+    runs-on: ubuntu-latest
+    timeout-minutes: 200
+    steps:
+      - name: Repository privato (programmi e risultati)
+        uses: actions/checkout@v4
+        with:
+          repository: drdonatistefano-cmyk/ristoranti-archivio
+          token: ${{ secrets.PRIVATO_TOKEN }}
+          fetch-depth: 1
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /strumenti/
+            /contatti/
+            /coordinamento/MENU-GUIDE.md
+      - name: Dati pubblicati delle tre guide
+        run: |
+          cd ..
+          git clone -q --depth 1 --filter=blob:none --sparse https://github.com/drdonatistefano-cmyk/achplaces
+          (cd achplaces && git sparse-checkout set --no-cone '/*.json' '/*.js' '/sorgenti/pagine.py')
+          git clone -q --depth 1 --filter=blob:none --sparse https://github.com/drdonatistefano-cmyk/achdinners.com
+          (cd achdinners.com && git sparse-checkout set --no-cone '/manifest.json' '/d/')
+          git clone -q --depth 1 --filter=blob:none --sparse https://github.com/drdonatistefano-cmyk/eventi-bologna
+          (cd eventi-bologna && git sparse-checkout set --no-cone '/*.js' '/milano/*.js' '/ravenna/*.js' '/ferrara/*.js')
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - run: pip install --quiet pypdf
+      - name: Elenco dei soggetti
+        run: python3 strumenti/soggetti_guide.py .. > /tmp/elenco.log 2>&1; tail -n 3 /tmp/elenco.log | sed -E 's/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+/[email]/g; s#https?://[^ ]+#[sito]#g'
+      - name: Prove (se una prova non riesce, il giro si ferma qui)
+        run: python3 strumenti/prove_cerca_siti.py | tail -n 1
+      - name: Menu dai siti (fino a 2 ore e mezza; il giro dopo riprende da qui)
+        env: { MAX_MINUTI: '150', PARALLELI: '32' }
+        run: |
+          python3 strumenti/menu_soggetti.py > /tmp/menu.log 2>&1 || true
+          grep -E "ristoranti con il sito|letti|fine:" /tmp/menu.log | tail -n 4 | sed -E 's/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+/[email]/g; s#https?://[^ ]+#[sito]#g'
+      - name: Salva nel repository privato
+        run: |
+          set +e
+          git config user.name "ach-officina"; git config user.email "actions@users.noreply.github.com"
+          python3 strumenti/salva_soggetti.py "Menu dei ristoranti (officina): giro del $(date +%d/%m/%Y)" > /tmp/salva.log 2>&1
+          s=$?
+          tail -n 3 /tmp/salva.log | sed -E 's/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+/[email]/g; s#https?://[^ ]+#[sito]#g'
+          exit $s
