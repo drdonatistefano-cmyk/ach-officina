@@ -34,6 +34,10 @@ jobs:
             /contatti/overture/overture_BO.csv
             /contatti/overture/overture_MI.csv
             /contatti/eventi-locali-lotto1.csv
+            /contatti/invii.csv
+            /contatti/soggetti/soggetti.csv
+            /contatti/soggetti/siti-trovati.csv
+            /contatti/soggetti/email-soggetti.csv
       - name: Programma di Events (repository pubblico)
         uses: actions/checkout@v4
         with: { repository: drdonatistefano-cmyk/eventi-bologna, path: _events, fetch-depth: 1 }

@@ -40,6 +40,8 @@ jobs:
       - run: pip install --quiet pypdf
       - name: Elenco dei soggetti
         run: python3 strumenti/soggetti_guide.py .. > /tmp/elenco.log 2>&1; tail -n 3 /tmp/elenco.log | sed -E 's/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+/[email]/g; s#https?://[^ ]+#[sito]#g'
+      - name: Prove del cerca siti e dei profili social (se una prova non riesce, il giro si ferma qui)
+        run: python3 strumenti/prove_cerca_siti.py | tail -n 1
       - name: Email dai siti (fino a 5 ore; il giro dopo riprende da qui)
         env: { MAX_MINUTI: '290', PARALLELI: '32' }
         run: |

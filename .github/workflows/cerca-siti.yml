@@ -39,6 +39,8 @@ jobs:
         with: { python-version: '3.12' }
       - name: Elenco dei soggetti
         run: python3 strumenti/soggetti_guide.py .. > /tmp/elenco.log 2>&1; tail -n 3 /tmp/elenco.log | sed -E 's/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+/[email]/g; s#https?://[^ ]+#[sito]#g'
+      - name: Prove del cerca siti e dei profili social (se una prova non riesce, il giro si ferma qui)
+        run: python3 strumenti/prove_cerca_siti.py | tail -n 1
       - name: Cerca siti, email e profili social (OpenStreetMap, Overture, Wikidata)
         run: |
           python3 strumenti/cerca_siti.py --osm --wikidata > /tmp/cerca.log 2>&1 || true
