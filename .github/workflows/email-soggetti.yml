@@ -1,0 +1,65 @@
+name: Email dei soggetti delle guide
+# 18/11/2026 (Stefano: «lettura nel pubblico»): stesso lavoro di «Contatti dei soggetti delle guide» del repository
+# privato, ma qui i minuti sono gratuiti. I programmi e i risultati restano nel privato: si legge e si salva là con
+# PRIVATO_TOKEN. Nel registro (pubblico) solo conteggi. Nessuna email viene inviata.
+on:
+  schedule:
+    - cron: '47 2 * * *'   # ogni notte; riprende da dove era rimasto, rilegge un sito solo dopo 90 giorni
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: write
+concurrency: { group: email-soggetti, cancel-in-progress: false }
+jobs:
+  raccogli:
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    steps:
+      - name: Repository privato (programmi e risultati)
+        uses: actions/checkout@v4
+        with:
+          repository: drdonatistefano-cmyk/ristoranti-archivio
+          token: ${{ secrets.PRIVATO_TOKEN }}
+          fetch-depth: 1
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /strumenti/
+            /contatti/
+            /coordinamento/MENU-GUIDE.md
+      - name: Dati pubblicati delle tre guide
+        run: |
+          cd ..
+          git clone -q --depth 1 --filter=blob:none --sparse https://github.com/drdonatistefano-cmyk/achplaces
+          (cd achplaces && git sparse-checkout set --no-cone '/*.json' '/*.js' '/sorgenti/pagine.py')
+          git clone -q --depth 1 --filter=blob:none --sparse https://github.com/drdonatistefano-cmyk/achdinners.com
+          (cd achdinners.com && git sparse-checkout set --no-cone '/manifest.json' '/d/')
+          git clone -q --depth 1 --filter=blob:none --sparse https://github.com/drdonatistefano-cmyk/eventi-bologna
+          (cd eventi-bologna && git sparse-checkout set --no-cone '/*.js' '/milano/*.js' '/ravenna/*.js' '/ferrara/*.js')
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - run: pip install --quiet pypdf
+      - name: Elenco dei soggetti
+        run: python3 strumenti/soggetti_guide.py .. > /tmp/elenco.log 2>&1; tail -n 3 /tmp/elenco.log | sed -E 's/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+/[email]/g; s#https?://[^ ]+#[sito]#g'
+      - name: Email dai siti (fino a 5 ore; il giro dopo riprende da qui)
+        env: { MAX_MINUTI: '290', PARALLELI: '32' }
+        run: |
+          python3 strumenti/contatti_soggetti.py > /tmp/giro.log 2>&1 || true
+          # nel registro pubblico solo righe di conteggio, ripulite da ogni indirizzo
+          grep -E "controllati|soggetti|fine:|restano" /tmp/giro.log | tail -n 5 | sed -E 's/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+/[email]/g; s#https?://[^ ]+#[sito]#g'
+      - name: Conteggi
+        run: python3 strumenti/conteggi_contatti.py > /dev/null 2>&1 || echo "conteggi non riusciti"
+      - name: Salva nel repository privato
+        run: |
+          set +e
+          git config user.name "ach-officina"; git config user.email "actions@users.noreply.github.com"
+          python3 strumenti/salva_soggetti.py "Contatti dei soggetti (officina): giro del $(date +%d/%m/%Y)" > /tmp/salva.log 2>&1
+          s=$?
+          tail -n 3 /tmp/salva.log | sed -E 's/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+/[email]/g; s#https?://[^ ]+#[sito]#g'
+          exit $s
+      - name: Giro successivo, se restano siti (al massimo 4 giri al giorno; qui i minuti sono gratuiti)
+        env: { GH_TOKEN: '${{ github.token }}' }
+        run: |
+          resta=$(grep -o 'restano [0-9]*' /tmp/giro.log | tail -1 | grep -o '[0-9]*' || echo 0)
+          oggi=$(gh run list -R ${{ github.repository }} --workflow email-soggetti.yml --created ">=$(date -u +%F)" --json databaseId -q length)
+          echo "restano $resta siti, giri di oggi $oggi"
+          if [ "${resta:-0}" -gt 0 ] && [ "${oggi:-9}" -lt 4 ]; then gh workflow run email-soggetti.yml -R ${{ github.repository }} --ref main && echo "giro successivo avviato"; fi
