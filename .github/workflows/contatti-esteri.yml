@@ -1,0 +1,99 @@
+name: Contatti esteri da Overture
+# 18/11/2026 (Stefano, richiesta della chat di coordinamento): stesso lavoro di «Contatti esteri da Overture» del
+# repository privato, con i minuti gratuiti. Scarica le 60 aree di Overture (strumenti/contatti_overture_estero.py,
+# niente Germania), salva contatti/estero/overture/ nel privato, poi mette i siti senza email nella coda
+# (estero_coda_siti.py) e fa partire «Email dai siti ufficiali», che li legge e rifà gli elenchi esteri
+# (estero_elenchi.py). Nel registro pubblico solo conteggi. Nessuna email viene inviata.
+on:
+  schedule:
+    - cron: '17 4 12 */3 *'   # ogni tre mesi
+  workflow_dispatch:
+    inputs:
+      aree:
+        description: 'Aree da scaricare, in JSON (vuoto = tutte e 60)'
+        default: ''
+permissions:
+  contents: read
+  actions: write
+concurrency: { group: contatti-esteri, cancel-in-progress: false }
+jobs:
+  scarica:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      max-parallel: 10
+      matrix:
+        area: ${{ fromJSON(github.event.inputs.aree || '["AT", "CH", "NL", "BE", "UK", "US-NE", "US-CA", "US-IL", "US-FL", "CA", "AU", "US-TXD", "US-TXH", "US-GA", "US-WA", "US-AZ", "US-CO", "US-MN", "US-NV", "US-OR", "CA-BC", "CA-AB", "AU-QLD", "AU-WA", "AU-SA", "NZ", "HK", "IN-MH", "IN-DL", "US-PIT", "US-OH", "US-CMH", "US-CVG", "US-MI", "US-STL", "US-MCI", "US-MSY", "US-CLT", "US-RDU", "US-BNA", "US-SLC", "US-HNL", "US-MKE", "US-IND", "US-AUS", "US-SAT", "US-CHS", "US-ABQ", "CA-WPG", "CA-HFX", "AU-CBR", "AU-HBA", "IN-KA", "IN-TN", "IN-WB", "IN-TG", "IN-PNQ", "JP-TYO", "JP-OSA", "JP-KYO"]') }}
+    steps:
+      - name: Repository privato (programmi e risultati)
+        uses: actions/checkout@v4
+        with:
+          repository: drdonatistefano-cmyk/ristoranti-archivio
+          token: ${{ secrets.PRIVATO_TOKEN }}
+          fetch-depth: 1
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /strumenti/
+            /contatti/estero/overture/
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - run: pip install --quiet overturemaps duckdb
+      - name: Scarica e filtra
+        run: |
+          python3 strumenti/contatti_overture_estero.py ${{ matrix.area }} > /tmp/area.log 2>&1; s=$?
+          grep -E "^Overture estero|non scaricato" /tmp/area.log | sed -E 's/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+/[email]/g; s#https?://[^ ]+#[sito]#g'
+          exit $s
+      - name: Salva nel repository privato
+        run: |
+          git config user.name "ach-officina"; git config user.email "actions@users.noreply.github.com"
+          git add --sparse contatti/estero/overture
+          git commit -qm "Contatti esteri da Overture (officina): ${{ matrix.area }}" > /dev/null || { echo "nessuna modifica"; exit 0; }
+          for i in 1 2 3 4 5 6 7 8; do
+            git pull --rebase -q --no-edit > /dev/null 2>&1 && git push -q > /dev/null 2>&1 && { echo "salvato al tentativo $i"; exit 0; }
+            git rebase --abort > /dev/null 2>&1; sleep $((RANDOM % 20 + 5))
+          done; echo "non salvato"; exit 1
+  coda:
+    needs: scarica
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Repository privato
+        uses: actions/checkout@v4
+        with:
+          repository: drdonatistefano-cmyk/ristoranti-archivio
+          token: ${{ secrets.PRIVATO_TOKEN }}
+          fetch-depth: 1
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /strumenti/
+            /contatti/estero/
+            /contatti/raccolta/
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - name: Conteggi delle aree
+        run: |
+          python3 - <<'PY'
+          import csv, glob
+          a = glob.glob('contatti/estero/overture/overture_*.csv'); s = glob.glob('contatti/estero/overture/siti_*.csv')
+          e = sum(sum(1 for _ in csv.DictReader(open(f, encoding='utf-8'))) for f in a)
+          n = sum(sum(1 for _ in csv.DictReader(open(f, encoding='utf-8'))) for f in s)
+          print(f"aree con email: {len(a)}, email: {e}; aree con siti: {len(s)}, siti senza email: {n}")
+          PY
+      - name: Siti senza email nella coda da leggere
+        run: python3 strumenti/estero_coda_siti.py 2>&1 | grep -E "coda-siti" | sed -E 's/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+/[email]/g; s#https?://[^ ]+#[sito]#g' || echo "coda non rifatta"
+      - name: Elenchi esteri
+        run: python3 strumenti/estero_elenchi.py 2>&1 | grep -E "indirizzi" | sed -E 's/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+/[email]/g; s#https?://[^ ]+#[sito]#g' || echo "elenchi esteri non rifatti"
+      - name: Salva nel repository privato
+        run: |
+          git config user.name "ach-officina"; git config user.email "actions@users.noreply.github.com"
+          git add --sparse contatti/raccolta contatti/estero
+          git commit -qm "Contatti esteri (officina): coda dei siti e elenchi" > /dev/null || { echo "nessuna modifica"; exit 0; }
+          for i in 1 2 3 4 5; do
+            git pull --rebase -q --no-edit > /dev/null 2>&1 && git push -q > /dev/null 2>&1 && { echo "salvato al tentativo $i"; exit 0; }
+            git rebase --abort > /dev/null 2>&1; sleep $((RANDOM % 15 + 5))
+          done; echo "non salvato"; exit 1
+      - name: Fa partire «Email dai siti ufficiali», che legge i siti nuovi
+        env: { GH_TOKEN: '${{ github.token }}' }
+        run: gh workflow run email-siti.yml -R ${{ github.repository }} --ref main && echo "lettura dei siti avviata"
