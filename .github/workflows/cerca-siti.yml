@@ -1,0 +1,53 @@
+name: Cerca siti dei soggetti senza sito
+# 18/11/2026 (Stefano): per i locali di Dinners e i luoghi di Events senza sito, cerca sito, email e link ai profili
+# Facebook e Instagram in OpenStreetMap, Overture e Wikidata (fonti aperte e gratuite; Facebook e Instagram non si
+# leggono). Programmi e risultati nel repository privato (strumenti/cerca_siti.py). Nel registro solo conteggi.
+# La notte dopo, «Email dei soggetti delle guide» legge i siti trovati.
+on:
+  schedule:
+    - cron: '23 18 * * 0'   # la domenica sera; le fonti scaricate si rinnovano ogni 30 giorni
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency: { group: cerca-siti, cancel-in-progress: false }   # il salvataggio unisce i risultati, anche se gira insieme alle email
+jobs:
+  raccogli:
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    steps:
+      - name: Repository privato (programmi e risultati)
+        uses: actions/checkout@v4
+        with:
+          repository: drdonatistefano-cmyk/ristoranti-archivio
+          token: ${{ secrets.PRIVATO_TOKEN }}
+          fetch-depth: 1
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /strumenti/
+            /contatti/
+            /coordinamento/MENU-GUIDE.md
+      - name: Dati pubblicati delle tre guide
+        run: |
+          cd ..
+          git clone -q --depth 1 --filter=blob:none --sparse https://github.com/drdonatistefano-cmyk/achplaces
+          (cd achplaces && git sparse-checkout set --no-cone '/*.json' '/*.js' '/sorgenti/pagine.py')
+          git clone -q --depth 1 --filter=blob:none --sparse https://github.com/drdonatistefano-cmyk/achdinners.com
+          (cd achdinners.com && git sparse-checkout set --no-cone '/manifest.json' '/d/')
+          git clone -q --depth 1 --filter=blob:none --sparse https://github.com/drdonatistefano-cmyk/eventi-bologna
+          (cd eventi-bologna && git sparse-checkout set --no-cone '/*.js' '/milano/*.js' '/ravenna/*.js' '/ferrara/*.js')
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - name: Elenco dei soggetti
+        run: python3 strumenti/soggetti_guide.py .. > /tmp/elenco.log 2>&1; tail -n 3 /tmp/elenco.log | sed -E 's/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+/[email]/g; s#https?://[^ ]+#[sito]#g'
+      - name: Cerca siti, email e profili social (OpenStreetMap, Overture, Wikidata)
+        run: |
+          python3 strumenti/cerca_siti.py --osm --wikidata > /tmp/cerca.log 2>&1 || true
+          grep -E "da cercare|Dinners:|Events:|scaricat|scritti" /tmp/cerca.log | sed -E 's/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+/[email]/g; s#https?://[^ ]+#[sito]#g'
+      - name: Salva nel repository privato
+        run: |
+          set +e
+          git config user.name "ach-officina"; git config user.email "actions@users.noreply.github.com"
+          python3 strumenti/salva_soggetti.py "Cerca siti (officina): giro del $(date +%d/%m/%Y)" > /tmp/salva.log 2>&1
+          s=$?
+          tail -n 3 /tmp/salva.log | sed -E 's/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+/[email]/g; s#https?://[^ ]+#[sito]#g'
+          exit $s
