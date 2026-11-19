@@ -62,6 +62,7 @@ jobs:
         if: always()
         run: |
           set +e
+          python3 strumenti/prove_salute_posta.py | tail -n 1 || { echo "prove non riuscite: salute non rifatta"; exit 1; }
           python3 strumenti/salute_posta.py 2>/dev/null | sed -E 's/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+/[email]/g'
           cp contatti/posta-salute.md /tmp/posta-salute.md
           for i in 1 2 3 4 5; do
