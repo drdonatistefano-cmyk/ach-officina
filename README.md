@@ -13,6 +13,7 @@ risultati resta in questo repository né come allegato dei giri.
 | `email-soggetti.yml` | ogni notte | email dai siti propri dei soggetti delle guide, e i link Facebook/Instagram che il sito stesso mostra |
 | `email-siti.yml` | ogni giorno | raccolta dei siti dagli elenchi pubblici |
 | `achrecipes-fonti.yml` | a richiesta | le fonti di AchRecipes (`achrecipes/strumenti/fonti.py`), come il flusso del privato ma gratis |
+| `rilancia.yml` | quando un giro lungo va male | lo rifà partire una volta (email, siti, cerca siti, menu, domini) |
 | `verifica-domini.yml` | ogni notte | domini dei destinatari delle lettere accese: i morti fra gli esclusi del privato |
 | `leggi-pagine.yml` | a richiesta | legge le pagine web indicate (anche siti in JavaScript) e salva il testo pulito nel privato; da una chat: `python3 strumenti/leggi_online.py URL` |
 | `menu-soggetti.yml` | ogni sera | link al menu e prezzo indicativo dei ristoranti di Dinners dal loro sito |
