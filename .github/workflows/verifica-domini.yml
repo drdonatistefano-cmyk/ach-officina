@@ -58,3 +58,17 @@ jobs:
             git push -q > /dev/null 2>&1 && { echo "salvato al tentativo $i"; exit 0; }
             sleep $((RANDOM % 15 + 5))
           done; echo "non salvato"; exit 1
+      - name: Salute della posta (autenticazione dei domini, liste nere, rimbalzi e rifiuti, testi)
+        if: always()
+        run: |
+          set +e
+          python3 strumenti/salute_posta.py 2>/dev/null | sed -E 's/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+/[email]/g'
+          cp contatti/posta-salute.md /tmp/posta-salute.md
+          for i in 1 2 3 4 5; do
+            git fetch -q origin main && git reset -q --hard origin/main
+            cp /tmp/posta-salute.md contatti/posta-salute.md
+            git add --sparse contatti/posta-salute.md
+            git commit -qm "Salute della posta (officina)" > /dev/null || { echo "invariata"; exit 0; }
+            git push -q > /dev/null 2>&1 && { echo "salvata al tentativo $i"; exit 0; }
+            sleep $((RANDOM % 15 + 5))
+          done; echo "non salvata"; exit 1
