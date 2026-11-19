@@ -44,14 +44,14 @@ jobs:
         with: { repository: drdonatistefano-cmyk/eventi-bologna, path: _events, fetch-depth: 1 }
       - uses: actions/setup-python@v5
         with: { python-version: "3.12" }
-      - run: pip install -q requests
+      - run: pip install -q requests pypdf beautifulsoup4 lxml playwright && python3 -m playwright install --with-deps chromium > /dev/null 2>&1   # 19/11: Chromium per i siti in JavaScript
       - name: Locali di Events e loro siti
         run: python3 strumenti/raccolta_coda_bo_mi.py _events > /tmp/coda.log 2>&1; tail -n 2 /tmp/coda.log | sed -E 's/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+/[email]/g; s#https?://[^ ]+#[sito]#g'
-      - name: Legge i siti nuovi (al massimo 90 minuti; i siti non letti restano per il giro dopo)
-        env: { MAX_MINUTI: '90' }
+      - name: Legge i siti nuovi (al massimo 80 minuti, più 20 per i siti in JavaScript; i non letti restano per il giro dopo)
+        env: { MAX_MINUTI: '80', BROWSER_MINUTI: '20' }
         run: |
           python3 strumenti/raccolta_siti.py ${{ github.event.inputs.limite && format('--limite {0}', github.event.inputs.limite) || '' }} > /tmp/siti.log 2>&1 || true
-          grep -E "da leggere|letti|restano" /tmp/siti.log | tail -n 4 | sed -E 's/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+/[email]/g; s#https?://[^ ]+#[sito]#g'
+          grep -E "da leggere|letti|restano|JavaScript" /tmp/siti.log | tail -n 5 | sed -E 's/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+/[email]/g; s#https?://[^ ]+#[sito]#g'
       - name: Elenco della lettera ai locali di Events
         run: python3 strumenti/events_elenco.py > /dev/null 2>&1 || echo "elenco non rifatto"
       - name: Elenchi delle lettere estere (le email trovate sui siti esteri entrano nelle lettere)
