@@ -1,0 +1,60 @@
+name: Controllo dei domini delle lettere
+# 19/11/2026: il «controllo preventivo dei domini» (cosa = verifica-… della «Posta delle guide» del privato) fatto qui,
+# con i minuti gratuiti: per le campagne indicate (o, ogni notte, per tutte quelle accese) controlla che il dominio di
+# ogni destinatario ancora da raggiungere esista; i domini morti vanno fra gli esclusi (contatti/esclusi.csv del
+# privato), così il giorno dell'invio non si spreca nessuna lettera. Nessuna email viene inviata e nessuna casella
+# di posta viene aperta: non servono le password della posta. Nel registro pubblico solo conteggi.
+on:
+  schedule:
+    - cron: '37 5 * * *'      # ogni notte, prima del primo giro di invio (9:10)
+  workflow_dispatch:
+    inputs:
+      codici:
+        description: 'Campagne da controllare, separate da virgole (vuoto o «attive» = tutte quelle accese)'
+        default: 'attive'
+permissions:
+  contents: read
+concurrency: { group: verifica-domini, cancel-in-progress: false }
+jobs:
+  controlla:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Repository privato (programmi, elenchi, esclusi)
+        uses: actions/checkout@v4
+        with:
+          repository: drdonatistefano-cmyk/ristoranti-archivio
+          token: ${{ secrets.PRIVATO_TOKEN }}
+          fetch-depth: 1
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /strumenti/
+            /posta/
+            /contatti/
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - run: pip install --quiet dnspython
+      - name: Controlla i domini
+        env:
+          CODICI: ${{ github.event.inputs.codici || 'attive' }}
+        run: |
+          c=$(echo "$CODICI" | tr -cd 'A-Za-z0-9,-'); [ -z "$c" ] && c=attive
+          cp contatti/esclusi.csv /tmp/esclusi-prima.csv
+          python3 strumenti/posta_invia.py --verifica "$c" 2>/dev/null | grep -E "pronti|esclusi" | sed -E 's/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+/[email]/g'
+      - name: Salva i domini morti fra gli esclusi del privato (solo aggiungendo righe)
+        run: |
+          set +e
+          git config user.name "ach-officina"; git config user.email "actions@users.noreply.github.com"
+          # le righe nuove; il file si cambia solo aggiungendo, e la posta del privato può averne aggiunte intanto:
+          # a ogni tentativo si riparte dal file di main e si riaggiungono le nostre righe che mancano
+          comm -13 <(sort /tmp/esclusi-prima.csv) <(sort contatti/esclusi.csv) > /tmp/nuove.csv
+          n=$(wc -l < /tmp/nuove.csv); echo "domini morti nuovi: $n"
+          [ "$n" -eq 0 ] && exit 0
+          for i in 1 2 3 4 5 6; do
+            git fetch -q origin main && git reset -q --hard origin/main
+            while IFS= read -r riga; do grep -qiF "${riga%%,*}," contatti/esclusi.csv || printf '%s\n' "$riga" >> contatti/esclusi.csv; done < /tmp/nuove.csv
+            git add --sparse contatti/esclusi.csv
+            git commit -qm "Esclusi: domini inesistenti (controllo dei domini dell'officina)" > /dev/null || { echo "già presenti"; exit 0; }
+            git push -q > /dev/null 2>&1 && { echo "salvato al tentativo $i"; exit 0; }
+            sleep $((RANDOM % 15 + 5))
+          done; echo "non salvato"; exit 1
