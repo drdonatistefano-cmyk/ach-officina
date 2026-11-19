@@ -37,17 +37,17 @@ jobs:
           (cd eventi-bologna && git sparse-checkout set --no-cone '/*.js' '/milano/*.js' '/ravenna/*.js' '/ferrara/*.js')
       - uses: actions/setup-python@v5
         with: { python-version: '3.12' }
-      - run: pip install --quiet pypdf
+      - run: pip install --quiet pypdf beautifulsoup4 lxml playwright && python3 -m playwright install --with-deps chromium > /dev/null 2>&1   # 19/11: Chromium per i siti in JavaScript
       - name: Elenco dei soggetti
         run: python3 strumenti/soggetti_guide.py .. > /tmp/elenco.log 2>&1; tail -n 3 /tmp/elenco.log | sed -E 's/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+/[email]/g; s#https?://[^ ]+#[sito]#g'
       - name: Prove del cerca siti e dei profili social (se una prova non riesce, il giro si ferma qui)
         run: python3 strumenti/prove_cerca_siti.py | tail -n 1
       - name: Email dai siti (fino a 5 ore; il giro dopo riprende da qui)
-        env: { MAX_MINUTI: '290', PARALLELI: '32' }
+        env: { MAX_MINUTI: '250', BROWSER_MINUTI: '45', PARALLELI: '32' }
         run: |
           python3 strumenti/contatti_soggetti.py > /tmp/giro.log 2>&1 || true
           # nel registro pubblico solo righe di conteggio, ripulite da ogni indirizzo
-          grep -E "controllati|soggetti|fine:|restano" /tmp/giro.log | tail -n 5 | sed -E 's/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+/[email]/g; s#https?://[^ ]+#[sito]#g'
+          grep -E "controllati|soggetti|fine:|restano|JavaScript" /tmp/giro.log | tail -n 6 | sed -E 's/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+/[email]/g; s#https?://[^ ]+#[sito]#g'
       - name: Conteggi
         run: python3 strumenti/conteggi_contatti.py > /dev/null 2>&1 || echo "conteggi non riusciti"
       - name: Salva nel repository privato

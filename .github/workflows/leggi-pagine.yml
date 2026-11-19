@@ -1,0 +1,68 @@
+name: Leggi pagine web
+# 19/11/2026 (Stefano): il «lettore web» gratuito. Legge le pagine indicate (anche i siti fatti in JavaScript, con
+# Chromium senza schermo) e salva il testo pulito nel repository privato, in contatti/letture/. Programmi nel privato
+# (strumenti/lettore_web.py). Nel registro pubblico solo conteggi: né indirizzi né testo.
+# Da una chat: python3 strumenti/leggi_online.py URL [URL ...]   (lo fa partire, aspetta e mostra il risultato)
+on:
+  workflow_dispatch:
+    inputs:
+      indirizzi:
+        description: 'Indirizzi delle pagine, separati da spazi o a capo (al massimo 200)'
+        required: true
+      browser:
+        description: 'Browser: auto (solo per i siti in JavaScript), sempre, mai'
+        default: 'auto'
+      nome:
+        description: 'Nome del file del risultato (lettere, numeri e trattini)'
+        default: 'lettura'
+permissions:
+  contents: read
+concurrency:
+  group: leggi-pagine-${{ github.event.inputs.nome }}
+  cancel-in-progress: false
+jobs:
+  leggi:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Repository privato (programmi e risultati)
+        uses: actions/checkout@v4
+        with:
+          repository: drdonatistefano-cmyk/ristoranti-archivio
+          token: ${{ secrets.PRIVATO_TOKEN }}
+          fetch-depth: 1
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /strumenti/
+            /contatti/letture/
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - name: Programmi (Chromium solo se serve)
+        env:
+          BROWSER: ${{ github.event.inputs.browser }}
+        run: |
+          pip install --quiet pypdf beautifulsoup4 lxml
+          if [ "$BROWSER" != "mai" ]; then pip install --quiet playwright && python3 -m playwright install --with-deps chromium > /dev/null 2>&1; fi
+      - name: Legge le pagine
+        env:
+          INDIRIZZI: ${{ github.event.inputs.indirizzi }}
+          BROWSER: ${{ github.event.inputs.browser }}
+          NOME: ${{ github.event.inputs.nome }}
+        run: |
+          nome=$(echo "$NOME" | tr -cd 'A-Za-z0-9-' | cut -c1-60); [ -z "$nome" ] && nome=lettura
+          echo "$INDIRIZZI" | tr ' ,;' '\n\n\n' | grep -E '^https?://' | head -n 200 > /tmp/indirizzi.txt
+          echo "indirizzi: $(wc -l < /tmp/indirizzi.txt)"
+          case "$BROWSER" in sempre|mai) b=$BROWSER;; *) b=auto;; esac
+          f="contatti/letture/$(date +%Y-%m-%d)-$nome.md"
+          python3 strumenti/lettore_web.py --elenco /tmp/indirizzi.txt --browser "$b" --uscita "$f" 2>/dev/null
+          echo "FILE=$f" >> "$GITHUB_ENV"
+      - name: Salva nel repository privato
+        run: |
+          set +e
+          git config user.name "ach-officina"; git config user.email "actions@users.noreply.github.com"
+          git add --sparse "$FILE"
+          git commit -qm "Letture web (officina): $(basename "$FILE")" > /dev/null || { echo "nessuna modifica"; exit 0; }
+          for i in 1 2 3 4 5 6; do
+            git pull --rebase -q --no-edit > /dev/null 2>&1 && git push -q > /dev/null 2>&1 && { echo "salvato al tentativo $i: $(basename "$FILE")"; exit 0; }
+            git rebase --abort > /dev/null 2>&1 || true; sleep $((RANDOM % 15 + 5))
+          done; echo "non salvato"; exit 1
