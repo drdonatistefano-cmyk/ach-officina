@@ -1,0 +1,49 @@
+name: Visite portate dalle lettere
+# 19/11/2026 sera (Stefano): quante visite porta ogni lettera. I link delle lettere hanno ?ref=<codice>; GoatCounter li
+# conta come provenienza. Con una chiave di sola lettura per guida (segreti GOATCOUNTER_ACHPLACES, GOATCOUNTER_ACHDINNERS,
+# GOATCOUNTER_EVENTIBOLOGNA) si leggono le provenienze degli ultimi 30 giorni e si salvano accanto alle lettere arrivate
+# in contatti/visite-lettere.md del privato (strumenti/visite_lettere.py). Senza chiavi non fa nulla. Registro: conteggi.
+on:
+  schedule:
+    - cron: '53 4 * * *'      # ogni notte
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency: { group: visite-lettere, cancel-in-progress: false }
+jobs:
+  visite:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Repository privato (programma e registro degli invii)
+        uses: actions/checkout@v4
+        with:
+          repository: drdonatistefano-cmyk/ristoranti-archivio
+          token: ${{ secrets.PRIVATO_TOKEN }}
+          fetch-depth: 1
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /strumenti/visite_lettere.py
+            /contatti/invii.csv
+      - name: Visite per lettera da GoatCounter
+        env:
+          GOATCOUNTER_ACHPLACES: ${{ secrets.GOATCOUNTER_ACHPLACES }}
+          GOATCOUNTER_ACHDINNERS: ${{ secrets.GOATCOUNTER_ACHDINNERS }}
+          GOATCOUNTER_EVENTIBOLOGNA: ${{ secrets.GOATCOUNTER_EVENTIBOLOGNA }}
+        run: |
+          python3 strumenti/visite_lettere.py
+          mkdir -p /tmp/v; cp contatti/visite-lettere.* /tmp/v/ 2>/dev/null || true
+      - name: Salva nel repository privato
+        run: |
+          [ -n "$(ls /tmp/v 2>/dev/null)" ] || { echo "niente da salvare"; exit 0; }
+          set +e
+          git config user.name "ach-officina"; git config user.email "actions@users.noreply.github.com"
+          git sparse-checkout add /contatti/visite-lettere.md /contatti/visite-lettere.csv
+          for i in 1 2 3 4 5; do
+            git fetch -q --depth 1 origin main && git reset -q --hard origin/main
+            cp /tmp/v/* contatti/
+            git add --sparse contatti/visite-lettere.md contatti/visite-lettere.csv
+            git commit -qm "Visite portate dalle lettere (officina)" > /dev/null || { echo "invariate"; exit 0; }
+            git push -q > /dev/null 2>&1 && { echo "salvate"; exit 0; }
+            sleep $((RANDOM % 10 + 5))
+          done; echo "non salvate"; exit 1

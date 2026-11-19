@@ -12,7 +12,7 @@ on:
   workflow_dispatch:
     inputs:
       quali:
-        description: 'coda (solo le lettere da spedire), inviati (per la misura), tutti'
+        description: 'coda (lettere da spedire), riserva (lettere spente), inviati (per la misura), tutti'
         default: 'tutti'
       minuti:
         description: 'Tempo massimo per le letture (minuti)'
@@ -45,7 +45,7 @@ jobs:
           QUALI: ${{ github.event.inputs.quali || 'tutti' }}
           MINUTI: ${{ github.event.inputs.minuti || '50' }}
         run: |
-          q=$(echo "$QUALI" | tr -cd 'a-z'); case "$q" in coda|inviati|tutti) ;; *) q=tutti;; esac
+          q=$(echo "$QUALI" | tr -cd 'a-z'); case "$q" in coda|riserva|inviati|tutti) ;; *) q=tutti;; esac
           m=$(echo "$MINUTI" | tr -cd '0-9'); [ -z "$m" ] && m=50; [ "$m" -gt 60 ] && m=60
           python3 strumenti/caselle.py --segnali --quali "$q" --minuti "$m" 2>/dev/null | sed -E 's/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+/[email]/g'
           python3 strumenti/caselle.py --coda 2>/dev/null | sed -E 's/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+/[email]/g'
