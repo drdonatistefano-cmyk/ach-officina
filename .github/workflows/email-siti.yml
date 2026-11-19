@@ -44,6 +44,9 @@ jobs:
         with: { repository: drdonatistefano-cmyk/eventi-bologna, path: _events, fetch-depth: 1 }
       - uses: actions/setup-python@v5
         with: { python-version: "3.12" }
+      - name: Chromium già scaricato nei giri prima (circa un minuto in meno a giro)
+        uses: actions/cache@v4
+        with: { path: ~/.cache/ms-playwright, key: chromium-1 }
       - run: pip install -q requests pypdf beautifulsoup4 lxml playwright && python3 -m playwright install --with-deps chromium > /dev/null 2>&1   # 19/11: Chromium per i siti in JavaScript
       - name: Locali di Events e loro siti
         run: python3 strumenti/raccolta_coda_bo_mi.py _events > /tmp/coda.log 2>&1; tail -n 2 /tmp/coda.log | sed -E 's/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+/[email]/g; s#https?://[^ ]+#[sito]#g'
