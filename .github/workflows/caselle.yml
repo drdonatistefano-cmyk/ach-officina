@@ -1,0 +1,79 @@
+name: Affidabilità delle caselle
+# 19/11/2026 (Stefano): gratis non si può chiedere al server se una casella esiste (porta 25 chiusa su GitHub e
+# Cloudflare). Al suo posto, per ogni casella in coda e per quelle già scritte: il sito del suo dominio è vivo, morto o
+# in vendita? l'indirizzo è ancora scritto oggi sul sito? la scheda di OpenStreetMap ce l'ha ancora? Poi misura quanto
+# tornano indietro le lettere per ogni prova (contatti/caselle/RIEPILOGO.md e regole.json: il controllo delle lettere
+# ferma solo i gruppi che tornano almeno 1 volta su 5) e cerca la casella nuova dello stesso ente per le lettere
+# tornate indietro (contatti/caselle/sostituti.csv). Programmi nel privato (strumenti/caselle.py); nessuna email
+# inviata, nessuna casella aperta. Nel registro pubblico solo conteggi.
+on:
+  schedule:
+    - cron: '7 4 * * *'      # ogni notte, prima del controllo dei domini (5:37) e del primo invio (9:10 di Roma)
+  workflow_dispatch:
+    inputs:
+      quali:
+        description: 'coda (solo le lettere da spedire), inviati (per la misura), tutti'
+        default: 'tutti'
+      minuti:
+        description: 'Tempo massimo per le letture (minuti)'
+        default: '50'
+permissions:
+  contents: read
+concurrency: { group: caselle, cancel-in-progress: false }
+jobs:
+  caselle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    steps:
+      - name: Repository privato (programmi, elenchi, invii)
+        uses: actions/checkout@v4
+        with:
+          repository: drdonatistefano-cmyk/ristoranti-archivio
+          token: ${{ secrets.PRIVATO_TOKEN }}
+          fetch-depth: 1
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /strumenti/
+            /posta/
+            /contatti/
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - name: Prove dello strumento
+        run: python3 strumenti/prove_caselle.py | tail -n 1
+      - name: Siti, pagine e OpenStreetMap delle caselle
+        env:
+          QUALI: ${{ github.event.inputs.quali || 'tutti' }}
+          MINUTI: ${{ github.event.inputs.minuti || '50' }}
+        run: |
+          q=$(echo "$QUALI" | tr -cd 'a-z'); case "$q" in coda|inviati|tutti) ;; *) q=tutti;; esac
+          m=$(echo "$MINUTI" | tr -cd '0-9'); [ -z "$m" ] && m=50; [ "$m" -gt 60 ] && m=60
+          python3 strumenti/caselle.py --segnali --quali "$q" --minuti "$m" 2>/dev/null | sed -E 's/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+/[email]/g'
+          python3 strumenti/caselle.py --coda 2>/dev/null | sed -E 's/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+/[email]/g'
+          mkdir -p /tmp/caselle && cp contatti/caselle/* /tmp/caselle/
+      - name: Salva nel repository privato (solo la cartella contatti/caselle)
+        run: |
+          set +e
+          git config user.name "ach-officina"; git config user.email "actions@users.noreply.github.com"
+          for i in 1 2 3 4 5 6; do
+            git fetch -q origin main && git reset -q --hard origin/main
+            # i sostituti già decisi a mano nel privato non si perdono: si tengono le righe di main che non sono «proposta»
+            if [ -f contatti/caselle/sostituti.csv ]; then python3 - <<'P'
+          import csv
+          m = {r["vecchia"]: r for r in csv.DictReader(open("contatti/caselle/sostituti.csv", encoding="utf-8"))}
+          n = list(csv.DictReader(open("/tmp/caselle/sostituti.csv", encoding="utf-8")))
+          campi = list(n[0].keys()) if n else list(next(iter(m.values())).keys())
+          for r in n:
+              if r["vecchia"] in m and m[r["vecchia"]]["stato"] != "proposta":
+                  r.update(m[r["vecchia"]])
+          viste = {r["vecchia"] for r in n}
+          n += [r for k, r in m.items() if k not in viste]
+          w = csv.DictWriter(open("/tmp/caselle/sostituti.csv", "w", encoding="utf-8", newline=""), fieldnames=campi)
+          w.writeheader(); w.writerows(n)
+          P
+            fi
+            mkdir -p contatti/caselle && cp /tmp/caselle/* contatti/caselle/
+            git add --sparse contatti/caselle
+            git commit -qm "Affidabilità delle caselle (officina)" > /dev/null || { echo "invariata"; exit 0; }
+            git push -q > /dev/null 2>&1 && { echo "salvata al tentativo $i"; exit 0; }
+            sleep $((RANDOM % 15 + 5))
+          done; echo "non salvata"; exit 1

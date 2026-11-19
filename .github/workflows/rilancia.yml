@@ -12,6 +12,7 @@ on:
       - Cerca siti dei soggetti senza sito
       - Menu dei ristoranti di Dinners
       - Controllo dei domini delle lettere
+      - Affidabilità delle caselle
     types: [completed]
 permissions:
   actions: write
