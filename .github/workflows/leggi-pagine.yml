@@ -52,6 +52,7 @@ jobs:
           INDIRIZZI: ${{ github.event.inputs.indirizzi }}
           BROWSER: ${{ github.event.inputs.browser }}
           NOME: ${{ github.event.inputs.nome }}
+          PAGINA_MAX_BYTE: '8000000'
         run: |
           nome=$(echo "$NOME" | tr -cd 'A-Za-z0-9-' | cut -c1-60); [ -z "$nome" ] && nome=lettura
           echo "$INDIRIZZI" | tr ' ,;' '\n\n\n' | grep -E '^https?://' | head -n 200 > /tmp/indirizzi.txt
