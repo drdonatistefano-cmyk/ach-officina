@@ -1,0 +1,33 @@
+name: Rilancio dei giri andati male
+# 19/11/2026: quando un giro lungo dell'officina fallisce, va oltre il tempo o viene fermato, lo rifà partire UNA volta
+# (dal 12 al 19/11 quattro giri persi: cerca siti, menu, contatti esteri, email dai siti, rilanciati a mano un giorno dopo).
+# I programmi riprendono da dove erano rimasti (le letture già salvate non si rifanno). Un giro che era già un
+# rilancio non si rilancia di nuovo: se va male due volte lo vede la sentinella in STATO.md. I giri a richiesta con
+# indirizzi o scelte (Leggi pagine web, AchRecipes: lettura fonti) non si rilanciano.
+on:
+  workflow_run:
+    workflows:
+      - Email dei soggetti delle guide
+      - Email dai siti ufficiali (locali di Events, ristoranti di Dinners)
+      - Cerca siti dei soggetti senza sito
+      - Menu dei ristoranti di Dinners
+      - Controllo dei domini delle lettere
+    types: [completed]
+permissions:
+  actions: write
+jobs:
+  rilancia:
+    if: contains(fromJSON('["failure","timed_out","cancelled","startup_failure"]'), github.event.workflow_run.conclusion) && github.event.workflow_run.event != 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Rifà partire il giro (una volta)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FLUSSO: ${{ github.event.workflow_run.path }}
+          ESITO: ${{ github.event.workflow_run.conclusion }}
+          NOME: ${{ github.event.workflow_run.name }}
+        run: |
+          f=$(basename "$FLUSSO")
+          echo "«$NOME» finito con esito $ESITO: lo rifaccio partire una volta ($f)"
+          gh workflow run "$f" -R "${{ github.repository }}" --ref main
