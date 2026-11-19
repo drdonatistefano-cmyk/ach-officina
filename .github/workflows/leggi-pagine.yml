@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       indirizzi:
-        description: 'Indirizzi delle pagine, separati da spazi o a capo (al massimo 200)'
+        description: 'Indirizzi delle pagine, separati da spazi o a capo (al massimo 200), oppure elenco:contatti/letture/elenchi/NOME.txt'
         required: true
       browser:
         description: 'Browser: auto (solo per i siti in JavaScript), sempre, mai'
@@ -55,7 +55,15 @@ jobs:
           PAGINA_MAX_BYTE: '8000000'
         run: |
           nome=$(echo "$NOME" | tr -cd 'A-Za-z0-9-' | cut -c1-60); [ -z "$nome" ] && nome=lettura
-          echo "$INDIRIZZI" | tr ' ,;' '\n\n\n' | grep -E '^https?://' | head -n 200 > /tmp/indirizzi.txt
+          # 19/11/2026: «elenco:contatti/letture/elenchi/NOME.txt» legge gli indirizzi da un file del privato (le liste
+          # lunghe non passano dal registro pubblico e dalle chat); solo quella cartella, solo nomi semplici
+          p="${INDIRIZZI#elenco:}"
+          if [ "$p" != "$INDIRIZZI" ]; then
+            echo "$p" | grep -Eq '^contatti/letture/elenchi/[A-Za-z0-9-]+\.txt$' && [ -f "$p" ] || { echo "elenco non valido"; exit 1; }
+            grep -E '^https?://' "$p" | head -n 200 > /tmp/indirizzi.txt
+          else
+            echo "$INDIRIZZI" | tr ' ,;' '\n\n\n' | grep -E '^https?://' | head -n 200 > /tmp/indirizzi.txt
+          fi
           echo "indirizzi: $(wc -l < /tmp/indirizzi.txt)"
           case "$BROWSER" in sempre|mai) b=$BROWSER;; *) b=auto;; esac
           f="contatti/letture/$(date +%Y-%m-%d)-$nome.md"
