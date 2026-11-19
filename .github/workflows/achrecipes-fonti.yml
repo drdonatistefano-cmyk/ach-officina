@@ -1,0 +1,46 @@
+name: "AchRecipes: lettura fonti"
+# 19/11/2026: lo stesso lavoro del flusso «AchRecipes: lettura fonti» del repository privato
+# (achrecipes/strumenti/fonti.py, della chat di AchRecipes), con i minuti gratuiti. Risultati (achrecipes/fonti/)
+# salvati nel privato. Solo a richiesta, come quello del privato. Nel registro pubblico solo conteggi.
+on:
+  workflow_dispatch:
+    inputs:
+      fonti:
+        description: 'Id delle fonti (vuoto = tutte)'
+        default: ''
+permissions:
+  contents: read
+concurrency: { group: achrecipes-fonti, cancel-in-progress: false }
+jobs:
+  leggi:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Repository privato (programmi e risultati)
+        uses: actions/checkout@v4
+        with:
+          repository: drdonatistefano-cmyk/ristoranti-archivio
+          token: ${{ secrets.PRIVATO_TOKEN }}
+          fetch-depth: 1
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /achrecipes/
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - run: pip install --quiet pypdf
+      - name: Legge le fonti
+        env:
+          FONTI: ${{ github.event.inputs.fonti }}
+        run: |
+          python3 achrecipes/strumenti/fonti.py $(echo "$FONTI" | tr -cd 'A-Za-z0-9_ -') > /tmp/fonti.log 2>&1; s=$?
+          echo "file delle fonti: $(ls achrecipes/fonti/testi achrecipes/fonti/titoli 2>/dev/null | wc -l); esito $s"
+      - name: Salva nel repository privato
+        run: |
+          set +e
+          git config user.name "ach-officina"; git config user.email "actions@users.noreply.github.com"
+          git add --sparse achrecipes/fonti
+          git commit -qm "AchRecipes: fonti lette nell'officina $(date -u +%F)" > /dev/null || { echo "nessuna modifica"; exit 0; }
+          for i in 1 2 3 4 5; do
+            git pull --rebase -q --no-edit > /dev/null 2>&1 && git push -q > /dev/null 2>&1 && { echo "salvato al tentativo $i"; exit 0; }
+            git rebase --abort > /dev/null 2>&1 || true; sleep $((RANDOM % 15 + 5))
+          done; echo "non salvato"; exit 1

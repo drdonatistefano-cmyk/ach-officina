@@ -37,6 +37,10 @@ jobs:
             /contatti/letture/
       - uses: actions/setup-python@v5
         with: { python-version: '3.12' }
+      - name: Chromium già scaricato nei giri prima (più veloce)
+        if: github.event.inputs.browser != 'mai'
+        uses: actions/cache@v4
+        with: { path: ~/.cache/ms-playwright, key: chromium-1 }
       - name: Programmi (Chromium solo se serve)
         env:
           BROWSER: ${{ github.event.inputs.browser }}
