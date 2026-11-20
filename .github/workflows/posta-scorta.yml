@@ -23,6 +23,10 @@ on:
     - cron: '51 16 * * *'    # giro della sera: solo lettura delle risposte
     - cron: '7 5 1 * *'      # il giorno 1: prova delle chiavi
   workflow_dispatch:
+    inputs:
+      prova:
+        description: 'si = prova del collegamento: fa partire il lavoro innocuo «prova» della Sala chiusa (nessuna posta)'
+        default: 'no'
 permissions:
   contents: read
   actions: write
@@ -54,6 +58,11 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           LAVORO: ${{ steps.g.outputs.lavoro }}
         run: gh workflow run sala-chiusa.yml -R "$GITHUB_REPOSITORY" --ref main -f lavoro="$LAVORO"
+      - name: Prova del collegamento (a mano, con prova=si)
+        if: github.event.inputs.prova == 'si'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run sala-chiusa.yml -R "$GITHUB_REPOSITORY" --ref main -f lavoro=prova
       - name: Il giorno 1, prova delle chiavi della casella
         if: github.event.schedule == '7 5 1 * *'
         env:
