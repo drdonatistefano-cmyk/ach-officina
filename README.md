@@ -21,3 +21,4 @@ risultati resta in questo repository né come allegato dei giri.
 | `menu-soggetti.yml` | ogni sera | link al menu e prezzo indicativo dei ristoranti di Dinners dal loro sito |
 | `contatti-esteri.yml` | ogni tre mesi | contatti esteri da Overture, coda dei siti, elenchi esteri |
 | `cerca-siti.yml` | la domenica | sito, email e profili social di chi non ha il sito, da OpenStreetMap, Overture e Wikidata |
+| `traduci-ricette.yml` | a richiesta | traduce in inglese procedimenti, storie e varianti di AchRecipes con il traduttore libero Opus-MT; risultato nel privato (`achrecipes/en/testi_auto.json`), controllato dalla chat di Recipes |
