@@ -23,3 +23,4 @@ risultati resta in questo repository né come allegato dei giri.
 | `cerca-siti.yml` | la domenica | sito, email e profili social di chi non ha il sito, da OpenStreetMap, Overture e Wikidata |
 | `traduci-ricette.yml` | a richiesta | traduce in inglese procedimenti, storie e varianti di AchRecipes con il traduttore libero Opus-MT; risultato nel privato (`achrecipes/en/testi_auto.json`), controllato dalla chat di Recipes |
 | `sala-chiusa.yml` | a richiesta | esegue qui, gratis, un lavoro del privato scelto per nome da un elenco chiuso (`strumenti/sala_chiusa.json` nel privato); tutto lo scritto del lavoro va in un file del privato, in questo registro solo conteggi |
+| `posta-scorta.yml` | agli orari della posta, pochi secondi | guardia della ruota di scorta: se i giri della posta nel privato si fermano (o la quota è all'85%) fa spedire l'officina tramite la Sala chiusa, e a mese nuovo riporta tutto nel privato; il giorno 1 prova le chiavi |

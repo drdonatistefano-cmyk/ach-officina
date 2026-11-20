@@ -1,0 +1,61 @@
+name: "Posta: ruota di scorta"
+# 20/11/2026 (Stefano: «ok procedi»). La posta delle guide gira nel repository privato. Questo flusso fa solo la guardia:
+# pochi secondi, agli orari dei giri. Guarda due cose nel privato (posta/dove.txt e la data del quadro STATO.md) e:
+#  - se va tutto bene non fa nulla («riposo»);
+#  - se i giri del privato non partono più, o i minuti del mese sono all'85% della quota (dal 1° dicembre), scrive
+#    «officina» in posta/dove.txt: da quel momento il privato non spedisce più e, dal giro dopo, spedisce l'officina
+#    con il lavoro «posta-scorta» della Sala chiusa (in questo registro: solo conteggi);
+#  - a mese nuovo riscrive «privato» e torna tutto come prima.
+# In ogni momento spedisce un posto solo. Le regole stanno in strumenti/posta_scorta.py nel privato (con le prove).
+# Il giorno 1 del mese prova le chiavi della casella (lavoro «prova-chiavi»), così la scorta è gonfia quando serve.
+on:
+  schedule:
+    # gli orari dei giri del privato, anticipati perché qui i giri a orario partono in ritardo
+    - cron: '20 7 * * 1-5'
+    - cron: '50 8 * * 1-5'
+    - cron: '20 10 * * 1-5'
+    - cron: '50 11 * * 1-5'
+    - cron: '20 13 * * 1-5'
+    - cron: '50 14 * * 1-5'
+    - cron: '55 8 * * 0,6'
+    - cron: '55 11 * * 0,6'
+    - cron: '55 14 * * 0,6'
+    - cron: '51 16 * * *'    # giro della sera: solo lettura delle risposte
+    - cron: '7 5 1 * *'      # il giorno 1: prova delle chiavi
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: write
+concurrency: { group: posta-scorta, cancel-in-progress: false }
+jobs:
+  guardia:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Dal privato solo tre file (dove gira la posta, il quadro, il programma)
+        uses: actions/checkout@v4
+        with:
+          repository: drdonatistefano-cmyk/ristoranti-archivio
+          token: ${{ secrets.PRIVATO_TOKEN }}
+          fetch-depth: 1
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /posta/dove.txt
+            /STATO.md
+            /strumenti/posta_scorta.py
+      - name: Guardia
+        id: g
+        env:
+          SERA: ${{ github.event.schedule == '51 16 * * *' && '--sera' || '' }}
+        run: python3 strumenti/posta_scorta.py --guardia $SERA 2>/dev/null | tail -n 1
+      - name: Tocca all'officina, giro della posta nella Sala chiusa
+        if: steps.g.outputs.lavoro != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          LAVORO: ${{ steps.g.outputs.lavoro }}
+        run: gh workflow run sala-chiusa.yml -R "$GITHUB_REPOSITORY" --ref main -f lavoro="$LAVORO"
+      - name: Il giorno 1, prova delle chiavi della casella
+        if: github.event.schedule == '7 5 1 * *'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run sala-chiusa.yml -R "$GITHUB_REPOSITORY" --ref main -f lavoro=prova-chiavi
