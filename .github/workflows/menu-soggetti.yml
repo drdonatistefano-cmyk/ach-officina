@@ -3,8 +3,8 @@ name: Menu dei ristoranti di Dinners
 # PDF del menu e ne ricava il prezzo indicativo (strumenti/menu_soggetti.py del repository privato). Si salvano solo il
 # link e i numeri dei prezzi, mai il testo del menu. Risultati nel privato; nel registro solo conteggi.
 on:
-  # 20/11/2026: giro serale spento. Stefano ha eliminato la proposta di menu e fascia di prezzo in Dinners («elimina 3»):
-  # i dati già letti restano nel privato (contatti/soggetti/menu-soggetti.csv). Si può ancora lanciare a mano.
+  schedule:
+    - cron: '43 20 * * *'   # ogni sera; riprende da dove era rimasto, rilegge un sito solo dopo 90 giorni (riacceso il 20/11: «menu riprendilo»)
   workflow_dispatch:
 permissions:
   contents: read
