@@ -77,3 +77,21 @@ jobs:
             git push -q > /dev/null 2>&1 && { echo "salvata al tentativo $i"; exit 0; }
             sleep $((RANDOM % 15 + 5))
           done; echo "non salvata"; exit 1
+      # 21/11/2026 (Stefano: «le code siano sempre sufficienti… fai in modo che diventi una routine»): subito dopo i
+      # controlli freschi delle caselle, strumenti/rifornimento.py porta le lettere spedibili ad almeno 7 giorni al limite
+      # pieno con i lotti continui (P2-C, P2-EC, P3-1LC; testi già approvati), solo con caselle che passano tutti i
+      # controlli. Nel registro pubblico solo conteggi. Salva solo i tre elenchi continui e contatti/rifornimento.json.
+      - name: Rifornimento delle code
+        run: |
+          set +e
+          git clone -q --depth 1 https://github.com/drdonatistefano-cmyk/achdinners.com /tmp/achdinners.com
+          git config user.name "ach-officina"; git config user.email "actions@users.noreply.github.com"
+          git sparse-checkout add /contatti/dinners-p2-continuo.csv /contatti/dinners-p2e-continuo.csv /contatti/places-gestori-continuo.csv /contatti/rifornimento.json
+          for i in 1 2 3 4 5; do
+            git fetch -q origin main && git reset -q --hard origin/main
+            python3 strumenti/rifornimento.py --dinners /tmp/achdinners.com 2>&1 | sed -E 's/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+/[email]/g'
+            git add --sparse contatti/dinners-p2-continuo.csv contatti/dinners-p2e-continuo.csv contatti/places-gestori-continuo.csv contatti/rifornimento.json
+            git commit -qm "Rifornimento delle code (officina)" > /dev/null || { echo "niente da aggiungere"; exit 0; }
+            git push -q > /dev/null 2>&1 && { echo "salvato al tentativo $i"; exit 0; }
+            sleep $((RANDOM % 15 + 5))
+          done; echo "non salvato"; exit 1
