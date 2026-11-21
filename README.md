@@ -15,7 +15,7 @@ risultati resta in questo repository né come allegato dei giri.
 | `achrecipes-fonti.yml` | a richiesta | le fonti di AchRecipes (`achrecipes/strumenti/fonti.py`), come il flusso del privato ma gratis |
 | `rilancia.yml` | quando un giro lungo va male | lo rifà partire una volta (email, siti, cerca siti, menu, domini) |
 | `verifica-domini.yml` | ogni notte | domini dei destinatari delle lettere accese: i morti fra gli esclusi del privato |
-| `caselle.yml` | ogni notte | affidabilità delle caselle: sito vivo o morto, indirizzo ancora sul sito, scheda OpenStreetMap; quanto tornano le lettere per ogni prova; caselle nuove per le lettere tornate indietro |
+| `caselle.yml` | ogni notte | affidabilità delle caselle: sito vivo o morto, indirizzo ancora sul sito, scheda OpenStreetMap; quanto tornano le lettere per ogni prova; caselle nuove per le lettere tornate indietro; poi «Cobra», il secondo controllo sui siti (mappa del sito, dati strutturati, browser; mai i social, nessuna email nuova raccolta), e il rifornimento delle code |
 | `visite-lettere.yml` | ogni notte | visite portate da ogni lettera (GoatCounter, chiavi di sola lettura); senza chiavi non fa nulla |
 | `leggi-pagine.yml` | a richiesta | legge le pagine web indicate (anche siti in JavaScript) e salva il testo pulito nel privato; da una chat: `python3 strumenti/leggi_online.py URL` |
 | `menu-soggetti.yml` | ogni sera | link al menu e prezzo indicativo dei ristoranti di Dinners dal loro sito |

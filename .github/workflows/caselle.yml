@@ -23,7 +23,7 @@ concurrency: { group: caselle, cancel-in-progress: false }
 jobs:
   caselle:
     runs-on: ubuntu-latest
-    timeout-minutes: 75
+    timeout-minutes: 130
     steps:
       - name: Repository privato (programmi, elenchi, invii)
         uses: actions/checkout@v4
@@ -77,6 +77,32 @@ jobs:
             git push -q > /dev/null 2>&1 && { echo "salvata al tentativo $i"; exit 0; }
             sleep $((RANDOM % 15 + 5))
           done; echo "non salvata"; exit 1
+      # 21/11/2026 (Stefano: «Procedi con i 5… diamogli un nome. Cobra»): Cobra (strumenti/cobra.py nel privato) è il
+      # secondo controllo: riprende le caselle che il passo qui sopra non ha trovato sul sito e le cerca con la mappa del
+      # sito, i dati strutturati, le email nascoste e un browser vero. Legge solo siti ufficiali (mai i social), rispetta
+      # robots.txt, non raccoglie email nuove (REGOLE 2.7) e non mette nulla in coda. Salva solo contatti/cobra, unendo
+      # i suoi risultati a quelli già su main. Se non riesce, il rifornimento qui sotto parte lo stesso. Qui solo conteggi.
+      - name: Cobra, secondo controllo delle caselle sui siti
+        continue-on-error: true
+        timeout-minutes: 50
+        run: |
+          set +e
+          git config user.name "ach-officina"; git config user.email "actions@users.noreply.github.com"
+          git fetch -q origin main && git reset -q --hard origin/main
+          [ -f strumenti/cobra.py ] || { echo "Cobra non c'è ancora nel privato"; exit 0; }
+          python3 strumenti/prove_cobra.py > /tmp/prove-cobra.txt 2>&1 || { echo "prove di Cobra non riuscite: stanotte non gira"; exit 0; }
+          tail -n 1 /tmp/prove-cobra.txt
+          b=""; { python3 -m pip install --quiet playwright && python3 -m playwright install --with-deps chromium; } > /dev/null 2>&1 || b="--senza-browser"
+          python3 strumenti/cobra.py --verifica --quali tutte --minuti 30 --fili 32 $b 2>/dev/null | sed -E 's/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+/[email]/g; s#https?://[^ ]+#[link]#g'
+          rm -rf /tmp/cobra; mkdir -p /tmp/cobra; cp contatti/cobra/* /tmp/cobra/ 2>/dev/null || { echo "niente da salvare"; exit 0; }
+          for i in 1 2 3 4 5; do
+            git fetch -q origin main && git reset -q --hard origin/main
+            python3 strumenti/cobra.py --unisci /tmp/cobra > /dev/null 2>&1
+            git add --sparse contatti/cobra
+            git commit -qm "Cobra: secondo controllo delle caselle sui siti (officina)" > /dev/null || { echo "invariato"; exit 0; }
+            git push -q > /dev/null 2>&1 && { echo "salvato al tentativo $i"; exit 0; }
+            sleep $((RANDOM % 15 + 5))
+          done; echo "non salvato"; exit 1
       # 21/11/2026 (Stefano: «le code siano sempre sufficienti… fai in modo che diventi una routine»): subito dopo i
       # controlli freschi delle caselle, strumenti/rifornimento.py porta le lettere spedibili ad almeno 7 giorni al limite
       # pieno con i lotti continui (P2-C, P2-EC, P3-1LC; testi già approvati), solo con caselle che passano tutti i
