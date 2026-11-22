@@ -94,7 +94,9 @@ jobs:
           tail -n 1 /tmp/prove-cobra.txt
           b=""; { python3 -m pip install --quiet playwright && python3 -m playwright install --with-deps chromium; } > /dev/null 2>&1 || b="--senza-browser"
           python3 strumenti/cobra.py --verifica --quali tutte --minuti 30 --fili 32 $b 2>/dev/null | sed -E 's/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+/[email]/g; s#https?://[^ ]+#[link]#g'
-          rm -rf /tmp/cobra; mkdir -p /tmp/cobra; cp contatti/cobra/* /tmp/cobra/ 2>/dev/null || { echo "niente da salvare"; exit 0; }
+          # 22/11/2026: dal 22/11 in contatti/cobra ci sono anche le cartelle delle missioni; «cp contatti/cobra/*» usciva con
+          # errore e il lavoro della notte non si salvava. Ora si copia tutto (cartelle comprese) e si esce solo se manca esiti.csv.
+          rm -rf /tmp/cobra; mkdir -p /tmp/cobra; cp -r contatti/cobra/. /tmp/cobra/ 2>/dev/null; [ -f /tmp/cobra/esiti.csv ] || { echo "niente da salvare"; exit 0; }
           for i in 1 2 3 4 5; do
             git fetch -q origin main && git reset -q --hard origin/main
             python3 strumenti/cobra.py --unisci /tmp/cobra > /dev/null 2>&1
