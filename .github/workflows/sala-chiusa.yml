@@ -50,6 +50,8 @@ jobs:
           POSTA_UTENTE: ${{ secrets.POSTA_UTENTE }}
           POSTA_PASSWORD: ${{ secrets.POSTA_PASSWORD }}
           POSTA_SEGRETO: ${{ secrets.POSTA_SEGRETO }}
+          # 22/11/2026: per contare i minuti del privato e i giri andati male nel giro della sera (STATO.md)
+          PRIVATO_TOKEN: ${{ secrets.PRIVATO_TOKEN }}
         run: |
           set -o pipefail
           if [ -z "$POSTA_UTENTE" ] || [ -z "$POSTA_PASSWORD" ]; then echo "sala chiusa: chiavi della posta non ancora messe nell'officina"; exit 2; fi
