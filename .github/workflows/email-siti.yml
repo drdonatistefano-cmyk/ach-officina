@@ -22,7 +22,7 @@ jobs:
       - name: Repository privato (programmi e risultati)
         uses: actions/checkout@v4
         with:
-          repository: drdonatistefano-cmyk/ristoranti-archivio
+          repository: ${{ github.repository_owner }}/ristoranti-archivio
           token: ${{ secrets.PRIVATO_TOKEN }}
           fetch-depth: 1
           sparse-checkout-cone-mode: false
@@ -41,7 +41,7 @@ jobs:
             /contatti/estero/
       - name: Programma di Events (repository pubblico)
         uses: actions/checkout@v4
-        with: { repository: drdonatistefano-cmyk/eventi-bologna, path: _events, fetch-depth: 1 }
+        with: { repository: "${{ github.repository_owner }}/eventi-bologna", path: _events, fetch-depth: 1 }
       - uses: actions/setup-python@v5
         with: { python-version: "3.12" }
       - name: Chromium già scaricato nei giri prima (circa un minuto in meno a giro)

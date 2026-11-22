@@ -17,7 +17,7 @@ jobs:
       - name: Repository privato (programmi e risultati)
         uses: actions/checkout@v4
         with:
-          repository: drdonatistefano-cmyk/ristoranti-archivio
+          repository: ${{ github.repository_owner }}/ristoranti-archivio
           token: ${{ secrets.PRIVATO_TOKEN }}
           fetch-depth: 1
           sparse-checkout-cone-mode: false
@@ -28,11 +28,11 @@ jobs:
       - name: Dati pubblicati delle tre guide
         run: |
           cd ..
-          git clone -q --depth 1 --filter=blob:none --sparse https://github.com/drdonatistefano-cmyk/achplaces
+          git clone -q --depth 1 --filter=blob:none --sparse https://github.com/${{ github.repository_owner }}/achplaces
           (cd achplaces && git sparse-checkout set --no-cone '/*.json' '/*.js' '/sorgenti/pagine.py')
-          git clone -q --depth 1 --filter=blob:none --sparse https://github.com/drdonatistefano-cmyk/achdinners.com
+          git clone -q --depth 1 --filter=blob:none --sparse https://github.com/${{ github.repository_owner }}/achdinners.com
           (cd achdinners.com && git sparse-checkout set --no-cone '/manifest.json' '/d/')
-          git clone -q --depth 1 --filter=blob:none --sparse https://github.com/drdonatistefano-cmyk/eventi-bologna
+          git clone -q --depth 1 --filter=blob:none --sparse https://github.com/${{ github.repository_owner }}/eventi-bologna
           (cd eventi-bologna && git sparse-checkout set --no-cone '/*.js' '/milano/*.js' '/ravenna/*.js' '/ferrara/*.js')
       - uses: actions/setup-python@v5
         with: { python-version: '3.12' }

@@ -23,7 +23,7 @@ jobs:
       - name: Repository privato (programmi, elenchi, esclusi)
         uses: actions/checkout@v4
         with:
-          repository: drdonatistefano-cmyk/ristoranti-archivio
+          repository: ${{ github.repository_owner }}/ristoranti-archivio
           token: ${{ secrets.PRIVATO_TOKEN }}
           fetch-depth: 1
           sparse-checkout-cone-mode: false

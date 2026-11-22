@@ -4,7 +4,7 @@ name: Sala chiusa
 # privato (strumenti/sala_chiusa.json), tutto quello che scrive finisce in un file del privato
 # (contatti/sala-chiusa/NOME.log) e in questo registro pubblico escono solo conteggi: esito, secondi, righe, file
 # cambiati. Alla fine si salvano nel privato solo le cartelle dichiarate per quel lavoro.
-# Da una chat: gh workflow run sala-chiusa.yml -R drdonatistefano-cmyk/ach-officina -f lavoro=prova
+# Da una chat: gh workflow run sala-chiusa.yml -R <account>/ach-officina (account: progetto.json del privato) -f lavoro=prova
 on:
   workflow_dispatch:
     inputs:
@@ -24,7 +24,7 @@ jobs:
       - name: Repository privato (programmi e dati)
         uses: actions/checkout@v4
         with:
-          repository: drdonatistefano-cmyk/ristoranti-archivio
+          repository: ${{ github.repository_owner }}/ristoranti-archivio
           token: ${{ secrets.PRIVATO_TOKEN }}
           fetch-depth: 1
       - uses: actions/setup-python@v5

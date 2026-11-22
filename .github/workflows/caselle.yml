@@ -28,7 +28,7 @@ jobs:
       - name: Repository privato (programmi, elenchi, invii)
         uses: actions/checkout@v4
         with:
-          repository: drdonatistefano-cmyk/ristoranti-archivio
+          repository: ${{ github.repository_owner }}/ristoranti-archivio
           token: ${{ secrets.PRIVATO_TOKEN }}
           fetch-depth: 1
           sparse-checkout-cone-mode: false
@@ -112,7 +112,7 @@ jobs:
       - name: Rifornimento delle code
         run: |
           set +e
-          git clone -q --depth 1 https://github.com/drdonatistefano-cmyk/achdinners.com /tmp/achdinners.com
+          git clone -q --depth 1 https://github.com/${{ github.repository_owner }}/achdinners.com /tmp/achdinners.com
           git config user.name "ach-officina"; git config user.email "actions@users.noreply.github.com"
           git sparse-checkout add /contatti/dinners-p2-continuo.csv /contatti/dinners-p2e-continuo.csv /contatti/places-gestori-continuo.csv /contatti/rifornimento.json
           for i in 1 2 3 4 5; do

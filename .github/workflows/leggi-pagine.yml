@@ -28,12 +28,13 @@ jobs:
       - name: Repository privato (programmi e risultati)
         uses: actions/checkout@v4
         with:
-          repository: drdonatistefano-cmyk/ristoranti-archivio
+          repository: ${{ github.repository_owner }}/ristoranti-archivio
           token: ${{ secrets.PRIVATO_TOKEN }}
           fetch-depth: 1
           sparse-checkout-cone-mode: false
           sparse-checkout: |
             /strumenti/
+            /progetto.json
             /contatti/letture/
       - uses: actions/setup-python@v5
         with: { python-version: '3.12' }
