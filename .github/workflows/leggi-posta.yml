@@ -1,0 +1,21 @@
+name: "Posta: lettura a comando"
+# 23/11/2026 (Stefano: «fai tu tutti i run che servono … leggi quelle mail»). La chat di coordinamento non ha l'interfaccia
+# di GitHub per lanciare i flussi: per una lettura della casella a comando di Stefano scrive l'ora in
+# richieste/leggi-posta.txt e fa push. Parte il lavoro «posta-scorta-sera» della Sala chiusa: solo lettura, comandi
+# lasciati, risposte già approvate, fotografia della casella. Nessuna lettera della campagna. Nel file solo l'ora.
+on:
+  push:
+    branches: [main]
+    paths: [richieste/leggi-posta.txt]
+permissions:
+  contents: read
+  actions: write
+jobs:
+  leggi:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Lettura della casella nella Sala chiusa
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run sala-chiusa.yml -R "$GITHUB_REPOSITORY" --ref main -f lavoro=posta-scorta-sera
