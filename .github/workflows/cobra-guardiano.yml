@@ -1,0 +1,32 @@
+name: Cobra guardiano (domenica sera)
+# 23/11/2026, Stefano alla chat di coordinamento: proposte 6-7 di Cobra («analisi interna del nostro progetto») e, alle
+# 13:50, «ok» a farlo girare ogni settimana nell'officina; alle 11:39 «gratuito o il più economico possibile». È il lavoro
+# «cobra-guardiano» della sala chiusa, lanciato a orario: rifà la stima dei rimbalzi (contatti/cobra/STIMA.md, stima.json:
+# rischio_posta la usa solo se migliore delle quote fisse e di meno di 15 giorni) e le 10 cose da migliorare (DIECI.md).
+# Legge solo i file del privato: niente rete, niente posta, pochi secondi. Qui escono solo conteggi. Domenica sera, così
+# la stima è fresca per i giri del lunedì. Stesso gruppo di concorrenza del lancio a mano.
+on:
+  schedule:
+    - cron: "41 19 * * 0"
+permissions:
+  contents: read
+concurrency: { group: "sala-chiusa-cobra-guardiano", cancel-in-progress: false }
+jobs:
+  cobra:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Repository privato (programmi e dati)
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository_owner }}/ristoranti-archivio
+          token: ${{ secrets.PRIVATO_TOKEN }}
+          fetch-depth: 1
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - name: Prove della sala chiusa (dallo schermo non deve passare nulla)
+        run: python3 strumenti/prove_sala_chiusa.py | tail -n 1
+      - name: Guardiano e stima di Cobra, a porte chiuse
+        run: |
+          set -o pipefail
+          python3 strumenti/sala_chiusa.py cobra-guardiano --salva 2>/dev/null | tail -n 3 | sed -E 's/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+/[email]/g; s#https?://[^ ]+#[link]#g'
