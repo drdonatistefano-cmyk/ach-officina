@@ -19,7 +19,8 @@ on:
         default: 'prova'
 permissions:
   contents: read
-concurrency: { group: "sala-chiusa-${{ github.event.inputs.lavoro || (github.event_name == 'schedule' && 'coda') || 'prova' }}", cancel-in-progress: false }
+# 23/11/2026 (Stefano: sì): i lavori della posta (posta-…) vanno uno alla volta, mai due insieme (niente risposte doppie)
+concurrency: { group: "sala-chiusa-${{ startsWith(github.event.inputs.lavoro, 'posta') && 'posta' || github.event.inputs.lavoro || (github.event_name == 'schedule' && 'coda') || 'prova' }}", cancel-in-progress: false }
 jobs:
   sala:
     runs-on: ubuntu-latest

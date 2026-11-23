@@ -21,6 +21,9 @@ on:
     - cron: '55 11 * * 0,6'
     - cron: '55 14 * * 0,6'
     - cron: '51 16 * * *'    # giro della sera: solo lettura delle risposte
+    # 23/11/2026 (Stefano: «sì alle due modifiche dell'officina»): lettura ogni ora, dalle 8:05 alle 21:05 di Roma,
+    # solo lettura + comandi lasciati + risposte approvate (nessuna lettera della campagna)
+    - cron: '5 7-20 * * *'
     - cron: '7 5 1 * *'      # il giorno 1: prova delle chiavi
   workflow_dispatch:
     inputs:
@@ -50,7 +53,7 @@ jobs:
       - name: Guardia
         id: g
         env:
-          SERA: ${{ github.event.schedule == '51 16 * * *' && '--sera' || '' }}
+          SERA: ${{ (github.event.schedule == '51 16 * * *' || github.event.schedule == '5 7-20 * * *') && '--sera' || '' }}
         run: python3 strumenti/posta_scorta.py --guardia $SERA 2>/dev/null | tail -n 1
       - name: Tocca all'officina, giro della posta nella Sala chiusa
         if: steps.g.outputs.lavoro != ''
