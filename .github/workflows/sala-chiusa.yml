@@ -5,7 +5,13 @@ name: Sala chiusa
 # (contatti/sala-chiusa/NOME.log) e in questo registro pubblico escono solo conteggi: esito, secondi, righe, file
 # cambiati. Alla fine si salvano nel privato solo le cartelle dichiarate per quel lavoro.
 # Da una chat: gh workflow run sala-chiusa.yml -R <account>/ach-officina (account: progetto.json del privato) -f lavoro=prova
+# 23/11/2026 (Stefano: «autorizzo l'uso dell'officina purché venga utilizzata senza compromettere altri lavori e che sia
+# gratis»): ogni ora parte il lavoro «coda», che fa uno solo dei lavori chiesti dalle chat (contatti/sala-chiusa/richieste.txt
+# nel privato, strumenti/sala_chiusa.py --chiedi) e lo toglie dalla coda; a coda vuota finisce in pochi secondi. Gratis:
+# repository pubblico. Mai due giri della coda insieme (concurrency qui sotto); la posta non passa mai dalla coda.
 on:
+  schedule:
+    - cron: "17 * * * *"
   workflow_dispatch:
     inputs:
       lavoro:
@@ -13,13 +19,13 @@ on:
         default: 'prova'
 permissions:
   contents: read
-concurrency: { group: "sala-chiusa-${{ github.event.inputs.lavoro || 'prova' }}", cancel-in-progress: false }
+concurrency: { group: "sala-chiusa-${{ github.event.inputs.lavoro || (github.event_name == 'schedule' && 'coda') || 'prova' }}", cancel-in-progress: false }
 jobs:
   sala:
     runs-on: ubuntu-latest
     timeout-minutes: 350
     env:
-      LAVORO: ${{ github.event.inputs.lavoro || 'prova' }}
+      LAVORO: ${{ github.event.inputs.lavoro || (github.event_name == 'schedule' && 'coda') || 'prova' }}
     steps:
       - name: Repository privato (programmi e dati)
         uses: actions/checkout@v4
