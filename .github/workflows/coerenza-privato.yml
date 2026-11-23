@@ -1,0 +1,50 @@
+name: Coerenza delle regole (dall'officina)
+# 23/11/2026, Stefano: «ok se conviene ed hai verificato tutto». Lo stesso lavoro che faceva ogni mattina «Coerenza delle
+# regole» nel repository privato (~30 giri al mese a pagamento, privato oltre la quota), qui gratis: il guardiano prende
+# ancora gli errori, l'impostazione regge (lavoro «coerenza»), i minuti del privato per STATO.md (lavoro «conti-github»),
+# la pulizia dei rami già pubblicati (rami claude/ con tutto il lavoro su main). Tutto a porte chiuse: lo scritto va nel
+# privato (contatti/sala-chiusa/*.log), qui escono solo conteggi. Nel privato «Coerenza delle regole» resta a mano.
+on:
+  schedule:
+    - cron: "29 4 * * *"
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency: { group: "coerenza-privato", cancel-in-progress: false }
+jobs:
+  coerenza:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Repository privato (programmi e dati)
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository_owner }}/ristoranti-archivio
+          token: ${{ secrets.PRIVATO_TOKEN }}
+          fetch-depth: 1
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - name: Prove della sala chiusa (dallo schermo non deve passare nulla)
+        run: python3 strumenti/prove_sala_chiusa.py | tail -n 1
+      - name: Pulizia dei rami già pubblicati (solo il numero esce qui)
+        continue-on-error: true
+        run: |
+          git config user.name "ach-officina"; git config user.email "actions@users.noreply.github.com"
+          git fetch -q --filter=blob:none --unshallow origin || git fetch -q --unshallow origin || true
+          python3 strumenti/pulizia_rami.py --applica > /dev/null 2>&1 || echo "pulizia dei rami non riuscita"
+          git add coordinamento/rami-tolti.csv 2>/dev/null || exit 0
+          git commit -qm "Pulizia dei rami già pubblicati: registro (dall'officina)" || { echo "nessun ramo da togliere"; exit 0; }
+          for i in 1 2 3 4 5; do git pull -q --rebase origin main && git push -q origin HEAD:main && echo "registro dei rami salvato" && exit 0; sleep $((RANDOM % 10 + 5)); done
+      - name: Minuti del privato per STATO.md, a porte chiuse
+        continue-on-error: true
+        env:
+          PRIVATO_TOKEN: ${{ secrets.PRIVATO_TOKEN }}
+        run: |
+          set -o pipefail
+          python3 strumenti/sala_chiusa.py conti-github --salva 2>/dev/null | tail -n 3 | sed -E 's/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+/[email]/g; s#https?://[^ ]+#[link]#g'
+      - name: Coerenza delle regole, a porte chiuse
+        env:
+          GH_TOKEN: ${{ secrets.PRIVATO_TOKEN }}
+        run: |
+          set -o pipefail
+          python3 strumenti/sala_chiusa.py coerenza --salva 2>/dev/null | tail -n 3 | sed -E 's/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+/[email]/g; s#https?://[^ ]+#[link]#g'

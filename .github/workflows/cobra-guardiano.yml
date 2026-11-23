@@ -49,6 +49,20 @@ jobs:
           else
             echo "non è la prima domenica del mese: elenchi ufficiali al prossimo mese"
           fi
+      - name: Pulizia dei file scaduti secondo le regole (snello.py; solo il numero esce qui)
+        # 23/11/2026 (Stefano: «ok se conviene ed hai verificato tutto»). Toglie da main SOLO i file oltre la scadenza delle
+        # regole già approvate (REGOLE 14) e già uguali su GitHub; ognuno resta nella storia di git e ha la sua riga in
+        # coordinamento/ELIMINATI.csv con il comando per riprenderlo. Gli allegati della posta sono solo proposti, mai tolti.
+        continue-on-error: true
+        run: |
+          git config user.name "ach-officina"; git config user.email "actions@users.noreply.github.com"
+          git fetch -q --filter=blob:none --unshallow origin || git fetch -q --unshallow origin || true
+          python3 strumenti/snello.py --applica 2>/dev/null | head -n 1 | sed -E 's/[^0-9a-zà-ù:; ]//gi'
+          git add -A coordinamento/ELIMINATI.csv 2>/dev/null || true
+          git diff --cached --quiet && { echo "niente di scaduto"; exit 0; }
+          git commit -qm "Snello: file scaduti secondo le regole, tolti da main (registro in coordinamento/ELIMINATI.csv; dall'officina)"
+          for i in 1 2 3 4 5; do git pull -q --rebase origin main && git push -q origin HEAD:main && echo "salvato" && exit 0; sleep $((RANDOM % 10 + 5)); done
+          echo "salvataggio non riuscito: al prossimo giro"; git reset -q --hard origin/main
       - name: Guardiano e stima di Cobra, a porte chiuse
         run: |
           set -o pipefail
