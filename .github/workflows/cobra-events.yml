@@ -1,0 +1,32 @@
+name: Cobra per Events (lunedì)
+# 23/11/2026, Stefano alla chat di Events: «usa cobra per cercare descrizioni, link sbagliati da correggere ed ogni azione
+# necessaria per migliorare il sito» e, alle 10:37, «sì» a farlo ripassare ogni lunedì dopo l'aggiornamento automatico;
+# alle 9:27: «purché venga utilizzata senza compromettere altri lavori e che sia gratis». È il lavoro «cobra-events-schede»
+# della sala chiusa, lanciato a orario: legge solo i link delle schede di Events (mai email), scrive proposte nel privato
+# (contatti/cobra/events-schede/), e qui escono solo conteggi. Gratis: repository pubblico. Stesso gruppo di concorrenza
+# del lancio a mano, così non partono mai due giri insieme e non si ferma nessun altro lavoro.
+on:
+  schedule:
+    - cron: "43 9 * * 1"
+permissions:
+  contents: read
+concurrency: { group: "sala-chiusa-cobra-events-schede", cancel-in-progress: false }
+jobs:
+  cobra:
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    steps:
+      - name: Repository privato (programmi e dati)
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository_owner }}/ristoranti-archivio
+          token: ${{ secrets.PRIVATO_TOKEN }}
+          fetch-depth: 1
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - name: Prove della sala chiusa (dallo schermo non deve passare nulla)
+        run: python3 strumenti/prove_sala_chiusa.py | tail -n 1
+      - name: Cobra sulle schede di Events, a porte chiuse
+        run: |
+          set -o pipefail
+          python3 strumenti/sala_chiusa.py cobra-events-schede --salva 2>/dev/null | tail -n 3 | sed -E 's/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+/[email]/g; s#https?://[^ ]+#[link]#g'
