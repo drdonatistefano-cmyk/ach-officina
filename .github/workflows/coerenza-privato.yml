@@ -1,9 +1,9 @@
 name: Coerenza delle regole (dall'officina)
 # 23/11/2026, Stefano: «ok se conviene ed hai verificato tutto». Lo stesso lavoro che faceva ogni mattina «Coerenza delle
 # regole» nel repository privato (~30 giri al mese a pagamento, privato oltre la quota), qui gratis: il guardiano prende
-# ancora gli errori, l'impostazione regge (lavoro «coerenza»), i minuti del privato per STATO.md (lavoro «conti-github»),
-# la pulizia dei rami già pubblicati (rami claude/ con tutto il lavoro su main). Tutto a porte chiuse: lo scritto va nel
-# privato (contatti/sala-chiusa/*.log), qui escono solo conteggi. Nel privato «Coerenza delle regole» resta a mano.
+# ancora gli errori, l'impostazione regge (lavoro «coerenza»), la pulizia dei rami già pubblicati (rami claude/ con tutto il lavoro su main). Tutto a porte chiuse: lo scritto va nel
+# privato (contatti/sala-chiusa/*.log), qui escono solo conteggi. I minuti del privato per STATO.md NON si leggono da qui
+# (la chiave PRIVATO_TOKEN vede solo i file): li conta ogni mattina il passo leggero rimasto nel privato.
 on:
   schedule:
     - cron: "29 4 * * *"
@@ -35,13 +35,6 @@ jobs:
           git add coordinamento/rami-tolti.csv 2>/dev/null || exit 0
           git commit -qm "Pulizia dei rami già pubblicati: registro (dall'officina)" || { echo "nessun ramo da togliere"; exit 0; }
           for i in 1 2 3 4 5; do git pull -q --rebase origin main && git push -q origin HEAD:main && echo "registro dei rami salvato" && exit 0; sleep $((RANDOM % 10 + 5)); done
-      - name: Minuti del privato per STATO.md, a porte chiuse
-        continue-on-error: true
-        env:
-          PRIVATO_TOKEN: ${{ secrets.PRIVATO_TOKEN }}
-        run: |
-          set -o pipefail
-          python3 strumenti/sala_chiusa.py conti-github --salva 2>/dev/null | tail -n 3 | sed -E 's/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+/[email]/g; s#https?://[^ ]+#[link]#g'
       - name: Coerenza delle regole, a porte chiuse
         env:
           GH_TOKEN: ${{ secrets.PRIVATO_TOKEN }}
