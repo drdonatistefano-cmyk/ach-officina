@@ -5,6 +5,10 @@ name: Cobra guardiano (domenica sera)
 # rischio_posta la usa solo se migliore delle quote fisse e di meno di 15 giorni) e le 10 cose da migliorare (DIECI.md).
 # Legge solo i file del privato: niente rete, niente posta, pochi secondi. Qui escono solo conteggi. Domenica sera, così
 # la stima è fresca per i giri del lunedì. Stesso gruppo di concorrenza del lancio a mano.
+# 23/11/2026 15:25 (Stefano: «ok parti con questo schema»): prima del guardiano, i link rotti fra le pagine delle guide
+# (guide-link), le caselle incerte cercate nell'archivio pubblico Common Crawl (cobra-archivio) e, la prima domenica del
+# mese, gli elenchi ufficiali delle strutture ricettive (cobra-registri). Ognuno salva da sé; se uno non riesce gli altri
+# vanno avanti (continue-on-error) e il guardiano lo segnala nelle «10 cose»: nessuna email di errore.
 on:
   schedule:
     - cron: "41 19 * * 0"
@@ -14,7 +18,7 @@ concurrency: { group: "sala-chiusa-cobra-guardiano", cancel-in-progress: false }
 jobs:
   cobra:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 150
     steps:
       - name: Repository privato (programmi e dati)
         uses: actions/checkout@v4
@@ -26,6 +30,25 @@ jobs:
         with: { python-version: '3.12' }
       - name: Prove della sala chiusa (dallo schermo non deve passare nulla)
         run: python3 strumenti/prove_sala_chiusa.py | tail -n 1
+      - name: Link rotti dentro le guide
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          python3 strumenti/sala_chiusa.py guide-link --salva 2>/dev/null | tail -n 3 | sed -E 's/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+/[email]/g; s#https?://[^ ]+#[link]#g'
+      - name: Caselle incerte nell'archivio Common Crawl
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          python3 strumenti/sala_chiusa.py cobra-archivio --salva 2>/dev/null | tail -n 3 | sed -E 's/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+/[email]/g; s#https?://[^ ]+#[link]#g'
+      - name: Elenchi ufficiali delle strutture ricettive (la prima domenica del mese)
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          if [ "$(date -u +%d)" -le 7 ]; then
+            python3 strumenti/sala_chiusa.py cobra-registri --salva 2>/dev/null | tail -n 3 | sed -E 's/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+/[email]/g; s#https?://[^ ]+#[link]#g'
+          else
+            echo "non è la prima domenica del mese: elenchi ufficiali al prossimo mese"
+          fi
       - name: Guardiano e stima di Cobra, a porte chiuse
         run: |
           set -o pipefail
