@@ -1,6 +1,6 @@
 name: "AchRecipes: lettura fonti"
 # 19/11/2026: lo stesso lavoro del flusso «AchRecipes: lettura fonti» del repository privato
-# (achrecipes/strumenti/fonti.py, della chat di AchRecipes), con i minuti gratuiti. Risultati (achrecipes/fonti/)
+# (achdishes/strumenti/fonti.py, della chat di AchRecipes), con i minuti gratuiti. Risultati (achdishes/fonti/)
 # salvati nel privato. Solo a richiesta, come quello del privato. Nel registro pubblico solo conteggi.
 on:
   workflow_dispatch:
@@ -10,7 +10,7 @@ on:
         default: ''
 permissions:
   contents: read
-concurrency: { group: achrecipes-fonti, cancel-in-progress: false }
+concurrency: { group: achdishes-fonti, cancel-in-progress: false }
 jobs:
   leggi:
     runs-on: ubuntu-latest
@@ -24,7 +24,7 @@ jobs:
           fetch-depth: 1
           sparse-checkout-cone-mode: false
           sparse-checkout: |
-            /achrecipes/
+            /achdishes/
       - uses: actions/setup-python@v5
         with: { python-version: '3.12' }
       - run: pip install --quiet pypdf
@@ -32,13 +32,13 @@ jobs:
         env:
           FONTI: ${{ github.event.inputs.fonti }}
         run: |
-          python3 achrecipes/strumenti/fonti.py $(echo "$FONTI" | tr -cd 'A-Za-z0-9_ -') > /tmp/fonti.log 2>&1; s=$?
-          echo "file delle fonti: $(ls achrecipes/fonti/testi achrecipes/fonti/titoli 2>/dev/null | wc -l); esito $s"
+          python3 achdishes/strumenti/fonti.py $(echo "$FONTI" | tr -cd 'A-Za-z0-9_ -') > /tmp/fonti.log 2>&1; s=$?
+          echo "file delle fonti: $(ls achdishes/fonti/testi achdishes/fonti/titoli 2>/dev/null | wc -l); esito $s"
       - name: Salva nel repository privato
         run: |
           set +e
           git config user.name "ach-officina"; git config user.email "actions@users.noreply.github.com"
-          git add --sparse achrecipes/fonti
+          git add --sparse achdishes/fonti
           git commit -qm "AchRecipes: fonti lette nell'officina $(date -u +%F)" > /dev/null || { echo "nessuna modifica"; exit 0; }
           for i in 1 2 3 4 5; do
             git pull --rebase -q --no-edit > /dev/null 2>&1 && git push -q > /dev/null 2>&1 && { echo "salvato al tentativo $i"; exit 0; }

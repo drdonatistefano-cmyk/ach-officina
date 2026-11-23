@@ -12,7 +12,7 @@ risultati resta in questo repository né come allegato dei giri.
 |---|---|---|
 | `email-soggetti.yml` | ogni notte | email dai siti propri dei soggetti delle guide, e i link Facebook/Instagram che il sito stesso mostra |
 | `email-siti.yml` | ogni giorno | raccolta dei siti dagli elenchi pubblici |
-| `achrecipes-fonti.yml` | a richiesta | le fonti di AchRecipes (`achrecipes/strumenti/fonti.py`), come il flusso del privato ma gratis |
+| `achdishes-fonti.yml` | a richiesta | le fonti di AchRecipes (`achdishes/strumenti/fonti.py`), come il flusso del privato ma gratis |
 | `rilancia.yml` | quando un giro lungo va male | lo rifà partire una volta (email, siti, cerca siti, menu, domini) |
 | `verifica-domini.yml` | ogni notte | domini dei destinatari delle lettere accese: i morti fra gli esclusi del privato |
 | `caselle.yml` | ogni notte | affidabilità delle caselle: sito vivo o morto, indirizzo ancora sul sito, scheda OpenStreetMap; quanto tornano le lettere per ogni prova; caselle nuove per le lettere tornate indietro; poi «Cobra», il secondo controllo sui siti (mappa del sito, dati strutturati, browser; mai i social, nessuna email nuova raccolta), e il rifornimento delle code |
@@ -21,6 +21,6 @@ risultati resta in questo repository né come allegato dei giri.
 | `menu-soggetti.yml` | ogni sera | link al menu e prezzo indicativo dei ristoranti di Dinners dal loro sito |
 | `contatti-esteri.yml` | ogni tre mesi | contatti esteri da Overture, coda dei siti, elenchi esteri |
 | `cerca-siti.yml` | la domenica | sito, email e profili social di chi non ha il sito, da OpenStreetMap, Overture e Wikidata |
-| `traduci-ricette.yml` | a richiesta | traduce in inglese procedimenti, storie e varianti di AchRecipes con il traduttore libero Opus-MT; risultato nel privato (`achrecipes/en/testi_auto.json`), controllato dalla chat di Recipes |
+| `traduci-ricette.yml` | a richiesta | traduce in inglese procedimenti, storie e varianti di AchRecipes con il traduttore libero Opus-MT; risultato nel privato (`achdishes/en/testi_auto.json`), controllato dalla chat di Recipes |
 | `sala-chiusa.yml` | a richiesta | esegue qui, gratis, un lavoro del privato scelto per nome da un elenco chiuso (`strumenti/sala_chiusa.json` nel privato); tutto lo scritto del lavoro va in un file del privato, in questo registro solo conteggi |
 | `posta-scorta.yml` | agli orari della posta, pochi secondi | guardia della ruota di scorta: se i giri della posta nel privato si fermano (o la quota è all'85%) fa spedire l'officina tramite la Sala chiusa, e a mese nuovo riporta tutto nel privato; il giorno 1 prova le chiavi |
