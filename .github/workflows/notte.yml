@@ -13,7 +13,7 @@ concurrency: { group: "sala-chiusa-notte", cancel-in-progress: false }
 jobs:
   notte:
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 110
     steps:
       - name: Repository privato (programmi e dati)
         uses: actions/checkout@v4
@@ -29,3 +29,12 @@ jobs:
         run: |
           set -o pipefail
           python3 strumenti/sala_chiusa.py prove-notte --salva 2>/dev/null | tail -n 3 | sed -E 's/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+/[email]/g; s#https?://[^ ]+#[link]#g'
+      # 25/11/2026 (Stefano 14:53: «Sì mercoledì»): ogni mercoledì notte la missione «recipes» di Cobra (Pro Loco, sagre,
+      # Presìdi, prima i comuni con più luoghi in Places), così il giro di Dishes del giovedì notte trova fonti nuove.
+      # Non è una raccolta di email: legge solo pagine pubbliche e scrive proposte in contatti/cobra/recipes/ del privato.
+      - name: Il mercoledì, fonti nuove per le ricette (Cobra, missione recipes)
+        continue-on-error: true
+        timeout-minutes: 65
+        run: |
+          [ "$(TZ=Europe/Rome date +%u)" = "3" ] || { echo "non è mercoledì: niente missione recipes"; exit 0; }
+          python3 strumenti/sala_chiusa.py cobra-recipes --salva 2>/dev/null | tail -n 3 | sed -E 's/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+/[email]/g; s#https?://[^ ]+#[link]#g'
