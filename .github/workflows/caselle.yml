@@ -9,6 +9,9 @@ name: Affidabilità delle caselle
 on:
   schedule:
     - cron: '7 4 * * *'      # ogni notte, prima del controllo dei domini (5:37) e del primo invio (9:10 di Roma)
+    # 25/11/2026 (Stefano 14:35: «procedi con 1»): un secondo giro a notte, così il controllo della vasca arriva prima
+    # all'80% e la ricerca di indirizzi nuovi riparte prima (REGOLE 2.7). Non tocca i giri della posta né le prove della notte.
+    - cron: '41 0 * * *'
   workflow_dispatch:
     inputs:
       quali:
