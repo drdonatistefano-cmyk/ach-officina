@@ -1,0 +1,31 @@
+name: Notte (prove e controlli del progetto)
+# 25/11/2026, Stefano alla chat di coordinamento: «auto-manutenzione», «auto-riparazione», «le chat velocissime».
+# Ogni notte alle 3:23 di Roma (fuori dai giri della posta): lavoro «prove-notte» della sala chiusa = tutte le prove del
+# privato + cronometro dell'avvio di ogni chat (strumenti/notte_prove.py). Salva solo contatti/prove-notte/ nel privato.
+# Legge solo i file del privato: niente rete, niente posta. Qui escono solo conteggi.
+on:
+  schedule:
+    - cron: "23 2 * * *"
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency: { group: "sala-chiusa-notte", cancel-in-progress: false }
+jobs:
+  notte:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Repository privato (programmi e dati)
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository_owner }}/ristoranti-archivio
+          token: ${{ secrets.PRIVATO_TOKEN }}
+          fetch-depth: 1
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - name: Programmi che servono alle prove
+        run: pip install -q -r requirements.txt 2>/dev/null | tail -n 1 || true
+      - name: Prove di tutto il progetto e cronometro delle chat, a porte chiuse
+        run: |
+          set -o pipefail
+          python3 strumenti/sala_chiusa.py prove-notte --salva 2>/dev/null | tail -n 3 | sed -E 's/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+/[email]/g; s#https?://[^ ]+#[link]#g'
