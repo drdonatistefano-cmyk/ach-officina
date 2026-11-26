@@ -35,6 +35,16 @@ jobs:
           git add coordinamento/rami-tolti.csv 2>/dev/null || exit 0
           git commit -qm "Pulizia dei rami già pubblicati: registro (dall'officina)" || { echo "nessun ramo da togliere"; exit 0; }
           for i in 1 2 3 4 5; do git pull -q --rebase origin main && git push -q origin HEAD:main && echo "registro dei rami salvato" && exit 0; sleep $((RANDOM % 10 + 5)); done
+      - name: Peso del progetto (toglie i file scaduti per regole già approvate; qui esce solo il numero)
+        # 26/11/2026 (Stefano: «1 ok»): prima snello.py --applica si lanciava a mano dalle chat, e le letture grezze scadute
+        # (7 giorni, REGOLE 14.1 e 14.6) restavano. Toglie solo file scaduti, già uguali su GitHub e non nominati da nessun
+        # programma; ogni file ha la sua riga in coordinamento/ELIMINATI.csv con il commit da cui si riprende.
+        continue-on-error: true
+        run: |
+          python3 strumenti/snello.py --applica 2>/dev/null | tail -n 1 || echo "pulizia del peso non riuscita"
+          git add coordinamento/ELIMINATI.csv 2>/dev/null || true
+          git commit -qm "Peso del progetto: tolti i file scaduti (dall'officina, registro in coordinamento/ELIMINATI.csv)" || { echo "nessun file scaduto"; exit 0; }
+          for i in 1 2 3 4 5; do git pull -q --rebase origin main && git push -q origin HEAD:main && echo "pulizia salvata" && exit 0; sleep $((RANDOM % 10 + 5)); done
       - name: Coerenza delle regole, a porte chiuse
         env:
           GH_TOKEN: ${{ secrets.PRIVATO_TOKEN }}
