@@ -28,30 +28,55 @@ jobs:
     env:
       LAVORO: ${{ github.event.inputs.lavoro || (github.event_name == 'schedule' && 'coda') || 'prova' }}
     steps:
+      # 26/11/2026 (Stefano 25/11 16:12, passo 1): il giro orario guarda prima la coda con una copia leggera (pochi secondi);
+      # se è vuota finisce lì, senza scaricare tutto il privato. Ogni altro caso va esattamente come prima.
+      - name: Coda vuota? (copia leggera)
+        id: coda
+        if: env.LAVORO == 'coda'
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository_owner }}/ristoranti-archivio
+          token: ${{ secrets.PRIVATO_TOKEN }}
+          fetch-depth: 1
+          sparse-checkout: |
+            strumenti
+            contatti/sala-chiusa
+          path: leggera
+      - name: Coda vuota? (risposta)
+        id: vuota
+        if: env.LAVORO == 'coda'
+        run: echo "stato=$(cd leggera && python3 strumenti/sala_chiusa.py --coda-vuota | tr -cd 'a-z')" >> "$GITHUB_OUTPUT"
+      - name: Coda vuota, niente da fare
+        if: steps.vuota.outputs.stato == 'vuota'
+        run: echo "sala chiusa, coda vuota (copia leggera, nessuno scaricamento del privato)"
       - name: Repository privato (programmi e dati)
+        if: steps.vuota.outputs.stato != 'vuota'
         uses: actions/checkout@v4
         with:
           repository: ${{ github.repository_owner }}/ristoranti-archivio
           token: ${{ secrets.PRIVATO_TOKEN }}
           fetch-depth: 1
       - uses: actions/setup-python@v5
+        if: steps.vuota.outputs.stato != 'vuota'
         with: { python-version: '3.12' }
       - name: Prove della sala chiusa (dallo schermo non deve passare nulla)
+        if: steps.vuota.outputs.stato != 'vuota'
         run: python3 strumenti/prove_sala_chiusa.py | tail -n 1
       - name: Quale lavoro, e con quali chiavi
         id: q
+        if: steps.vuota.outputs.stato != 'vuota'
         run: |
           l=$(printf '%s' "$LAVORO" | tr -cd 'a-z0-9-' | cut -c1-41)
           s=$(python3 strumenti/sala_chiusa.py --segreti "$l" | tr -cd 'a-z' | cut -c1-12)
           echo "lavoro=$l" >> "$GITHUB_OUTPUT"; echo "segreti=$s" >> "$GITHUB_OUTPUT"
       - name: Il lavoro, a porte chiuse (senza chiavi)
-        if: steps.q.outputs.segreti == ''
+        if: steps.vuota.outputs.stato != 'vuota' && steps.q.outputs.segreti == ''
         env: { L: "${{ steps.q.outputs.lavoro }}" }
         run: |
           set -o pipefail
           python3 strumenti/sala_chiusa.py "$L" --salva 2>/dev/null | tail -n 3 | sed -E 's/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+/[email]/g; s#https?://[^ ]+#[link]#g'
       - name: Il lavoro, a porte chiuse (con le chiavi della casella di posta)
-        if: steps.q.outputs.segreti == 'posta'
+        if: steps.vuota.outputs.stato != 'vuota' && steps.q.outputs.segreti == 'posta'
         env:
           L: ${{ steps.q.outputs.lavoro }}
           POSTA_UTENTE: ${{ secrets.POSTA_UTENTE }}
