@@ -6,6 +6,10 @@ name: Notte (prove e controlli del progetto)
 on:
   schedule:
     - cron: "23 2 * * *"
+    # 27/11/2026 (Stefano: «fai in modo che non accada più»): anche alle 13:23 di Roma, così una prova corretta in mattinata
+    # non resta rossa sulla pagina Cobra fino alla notte dopo (subito: strumenti/rimisura.py prove nel privato).
+    # La missione del mercoledì gira solo con il giro della notte (vedi sotto).
+    - cron: "23 12 * * *"
   workflow_dispatch:
 permissions:
   contents: read
@@ -37,4 +41,5 @@ jobs:
         timeout-minutes: 65
         run: |
           [ "$(TZ=Europe/Rome date +%u)" = "3" ] || { echo "non è mercoledì: niente missione recipes"; exit 0; }
+          [ "$(TZ=Europe/Rome date +%H)" -lt 6 ] || { echo "giro del pomeriggio: la missione recipes resta alla notte"; exit 0; }
           python3 strumenti/sala_chiusa.py cobra-recipes --salva 2>/dev/null | tail -n 3 | sed -E 's/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+/[email]/g; s#https?://[^ ]+#[link]#g'
